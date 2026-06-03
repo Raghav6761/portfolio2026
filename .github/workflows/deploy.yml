@@ -6,29 +6,31 @@ on:
   workflow_dispatch:
 
 jobs:
-  deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Deploy to DigitalOcean
-        uses: appleboy/ssh-action@master
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
-          host: ${{ secrets.DO_HOST }}
-          username: root
-          key: ${{ secrets.DO_SSH_KEY }}
-          script: |
-            set -e
-            cd /var/www/raghavwatts.com
+          node-version: '22'
+          cache: 'npm'
 
-            # Pull latest (or clone first time)
-            if [ -d ".git" ]; then
-              git pull origin main
-            else
-              git clone https://github.com/Raghav6761/portfolio2026.git .
-            fi
+      - name: Install dependencies
+        run: npm ci
 
-            # Install + build
-            npm ci
-            NODE_OPTIONS="--max_old_space_size=768" npm run build
+      - name: Build Astro site
+        run: npm run build
 
-            echo "Deployed successfully!"
+      - name: Deploy via rsync
+        uses: burnett01/rsync-deployments@7.0.1
+        with:
+          switches: -avzr --delete
+          path: dist/
+          remote_path: /var/www/raghavwatts.com/dist/
+          remote_host: ${{ secrets.DO_HOST }}
+          remote_user: root
+          remote_key: ${{ secrets.DO_SSH_KEY }}
