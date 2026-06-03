@@ -1,0 +1,41 @@
+---
+const year = new Date().getFullYear();
+---
+
+<footer>
+    <div class="wrap">
+        <span>© {year} Raghav Watts</span>
+        <span class="jp">ものづくり</span>
+        <span class="hand">Hand-built - obviously.</span>
+    </div>
+</footer>
+
+<style>
+    footer {
+        border-top: 1px solid var(--line);
+        padding: 38px 0;
+    }
+
+    .wrap {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 14px;
+    }
+
+    span {
+        font-family: var(--mono);
+        font-size: 0.72rem;
+        color: var(--faint);
+        letter-spacing: 0.05em;
+    }
+
+    .jp {
+        font-family: var(--serif);
+        font-size: 0.95rem;
+        letter-spacing: 0.4em;
+        color: var(--accent);
+        opacity: 0.6;
+    }
+</style>

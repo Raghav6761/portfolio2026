@@ -1,0 +1,102 @@
+---
+interface Props {
+    title: string;
+    status: "live" | "built" | "building";
+    summary: string;
+    couldBecome: string[];
+}
+
+const { title, status, summary, couldBecome } = Astro.props;
+---
+
+<article class="found">
+    <div class="fhead">
+        <h3>{title}</h3>
+        <span class="tag">{status}</span>
+    </div>
+
+    <p class="desc">{summary}</p>
+
+    <div class="become">
+        <span class="lab">could become -></span>
+        <div class="chips">
+            {couldBecome.map((item) => <span class="chip">{item}</span>)}
+        </div>
+    </div>
+</article>
+
+<style>
+    .found {
+        background: var(--bg);
+        padding: 34px 30px;
+        transition: background 0.3s;
+    }
+    .found:hover {
+        background: var(--surface);
+    }
+
+    .fhead {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 14px;
+        flex-wrap: wrap;
+    }
+    .fhead h3 {
+        font-family: var(--serif);
+        font-weight: 500;
+        font-size: 1.55rem;
+    }
+
+    .tag {
+        font-family: var(--mono);
+        font-size: 0.62rem;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        padding: 4px 9px;
+        border: 1px solid var(--line);
+        border-radius: 2px;
+        color: var(--accent);
+        white-space: nowrap;
+    }
+
+    .desc {
+        color: var(--muted);
+        font-size: 0.98rem;
+        margin-bottom: 20px;
+        max-width: 62ch;
+    }
+
+    .become {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        flex-wrap: wrap;
+    }
+    .become .lab {
+        font-family: var(--mono);
+        font-size: 0.64rem;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--accent);
+        white-space: nowrap;
+    }
+
+    .chips {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    .chip {
+        font-size: 0.84rem;
+        color: var(--text);
+        background: var(--bg-2);
+        border: 1px solid var(--line);
+        border-radius: 2px;
+        padding: 5px 11px;
+        transition: border-color 0.3s;
+    }
+    .found:hover .chip {
+        border-color: var(--accent-soft);
+    }
+</style>

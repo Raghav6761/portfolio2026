@@ -1,0 +1,79 @@
+---
+interface Props {
+    title: string;
+    domain: string;
+    description: string;
+    stack: string[];
+}
+
+const { title, domain, description, stack } = Astro.props;
+---
+
+<article class="proj">
+    <div class="ptitle">
+        {title}
+        <span class="tag">{domain}</span>
+    </div>
+    <div class="pbody">
+        <p>{description}</p>
+        <div class="stack">{stack.join(" · ")}</div>
+    </div>
+</article>
+
+<style>
+    .proj {
+        display: grid;
+        grid-template-columns: 1fr 1.7fr;
+        gap: 30px;
+        align-items: center;
+        padding: 28px 8px;
+        border-bottom: 1px solid var(--line);
+        transition: 0.3s;
+    }
+    .proj:hover {
+        background: var(--surface);
+        padding-left: 18px;
+        padding-right: 18px;
+    }
+
+    .ptitle {
+        font-family: var(--serif);
+        font-size: 1.35rem;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+
+    .tag {
+        font-family: var(--mono);
+        font-size: 0.62rem;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        padding: 4px 9px;
+        border: 1px solid var(--line);
+        border-radius: 2px;
+        color: var(--accent);
+        white-space: nowrap;
+    }
+
+    .pbody p {
+        color: var(--muted);
+        font-size: 0.93rem;
+        margin-bottom: 6px;
+    }
+    .pbody .stack {
+        font-family: var(--mono);
+        font-size: 0.68rem;
+        color: var(--faint);
+        letter-spacing: 0.05em;
+    }
+
+    @media (max-width: 760px) {
+        .proj {
+            grid-template-columns: 1fr;
+            gap: 10px;
+        }
+    }
+</style>

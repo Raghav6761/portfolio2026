@@ -1,0 +1,83 @@
+---
+const links = [
+    { href: "#how", label: "How I work" },
+    { href: "#foundations", label: "Foundations" },
+    { href: "#work", label: "Work" },
+    { href: "#about", label: "About" },
+];
+---
+
+<nav id="nav">
+    <div class="wrap nav-inner">
+        <a href="/" class="brand">Raghav Watts</a>
+        <div class="links">
+            {links.map((l) => <a href={l.href}>{l.label}</a>)}
+            <a href="#contact" class="btn">Get in touch</a>
+        </div>
+    </div>
+</nav>
+
+<style>
+    nav {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 100;
+        padding: 18px 0;
+        backdrop-filter: blur(20px);
+        background: linear-gradient(
+            to bottom,
+            rgba(20, 17, 13, 0.85),
+            rgba(20, 17, 13, 0)
+        );
+        transition: background 0.3s;
+    }
+
+    .nav-inner {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .brand {
+        font-family: var(--serif);
+        font-size: 1.05rem;
+        font-weight: 500;
+        color: var(--text);
+    }
+
+    .links {
+        display: flex;
+        align-items: center;
+        gap: 26px;
+    }
+    .links a {
+        font-family: var(--mono);
+        font-size: 0.72rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--muted);
+        transition: color 0.25s;
+    }
+    .links a:hover {
+        color: var(--accent);
+    }
+
+    .links a.btn {
+        border: 1px solid var(--line);
+        border-radius: 2px;
+        padding: 9px 14px;
+        color: var(--text);
+    }
+    .links a.btn:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+    }
+
+    @media (max-width: 680px) {
+        .links a:not(.btn) {
+            display: none;
+        }
+    }
+</style>

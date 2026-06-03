@@ -1,0 +1,66 @@
+---
+
+---
+
+<section id="about">
+    <div class="wrap about">
+        <div class="label-col">
+            <div class="label">// the human</div>
+        </div>
+        <div class="text-col">
+            <p>
+                I'm Raghav - a builder who'd rather understand one problem
+                deeply than fake breadth across ten. I build the work and the
+                products I actually believe in, and I treat learning a new field
+                as the fun part, not the overhead.
+            </p>
+            <p>
+                Most days start with a run before the world's awake - the
+                discipline there is the same one I bring to a build. Off the
+                clock I'm an unrepentant anime nerd and the owner of a flute I
+                keep promising to practise. I build the way I'd want someone to
+                build for me: carefully, honestly, and finished.
+            </p>
+        </div>
+    </div>
+</section>
+
+<style>
+    section {
+        padding: 110px 0;
+        border-top: 1px solid var(--line);
+    }
+
+    .about {
+        display: grid;
+        grid-template-columns: 1fr 1.3fr;
+        gap: 60px;
+        align-items: start;
+    }
+
+    .label {
+        font-family: var(--mono);
+        font-size: 0.75rem;
+        color: var(--accent);
+        letter-spacing: 0.15em;
+    }
+
+    .text-col p {
+        font-family: var(--serif);
+        font-weight: 400;
+        font-size: clamp(1.3rem, 2.3vw, 1.7rem);
+        line-height: 1.5;
+        color: var(--text);
+        margin-bottom: 1em;
+    }
+    .text-col p:last-child {
+        margin-bottom: 0;
+    }
+
+    @media (max-width: 760px) {
+        .about {
+            grid-template-columns: 1fr;
+            gap: 24px;
+        }
+    }
+</style>

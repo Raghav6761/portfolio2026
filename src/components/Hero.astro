@@ -1,0 +1,216 @@
+---
+// Hero - Headline, Pitch, CTA
+// No Props yet
+---
+
+<header>
+    <div id="glow"></div>
+    <div class="vlabel">ものづくり</div>
+
+    <div class="wrap hero hero-inner">
+        <div class="eyebrow">
+            Full-stack builder . Proven Foundations, shaped to you
+        </div>
+
+        <h1>You don't need to build it <em>from scratch.</em></h1>
+
+        <p class="sub">
+            I've built the hard parts - finance tracking, real-time 3d
+            rendering, automated research engines. I learn your field, then
+            shape a proven foundation into what you actually need:
+            <em
+                >faster than bespoke, and still more tailored to you than
+                off-the-shelf.</em
+            >
+        </p>
+
+        <div class="cta">
+            <a href="#foundations" class="btn solid">See the foundations</a>
+            <a href="#work" class="btn">See the work</a>
+        </div>
+
+        <div class="status">
+            <span class="dot"></span>
+            <span> Currently building VIP - a dedicated research engine </span>
+        </div>
+    </div>
+</header>
+
+<style>
+    header {
+        position: relative;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        overflow: hidden;
+    }
+
+    #glow {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 680px;
+        height: 680px;
+        background: radial-gradient(
+            circle,
+            rgba(215, 162, 74, 0.18) 0%,
+            transparent 65%
+        );
+        filter: blur(60px);
+        z-index: 1;
+        pointer-events: none;
+        transform: translate(-280px, -180px);
+        transition: transform 0.5s ease-out;
+        will-change: transform;
+    }
+
+    .vlabel {
+        position: absolute;
+        right: 34px;
+        top: 50%;
+        transform: translateY(-50%);
+        writing-mode: vertical-rl;
+        font-family: var(--serif);
+        font-size: 1.1rem;
+        letter-spacing: 0.5rem;
+        color: var(--faint);
+        opacity: 0.5;
+    }
+
+    .eyebrow {
+        margin-bottom: 20px;
+        font-family: var(--mono);
+        font-size: 0.72rem;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--accent);
+    }
+
+    @media (max-width: 900px) {
+        .vlabel {
+            display: none;
+        }
+    }
+
+    h1 {
+        font-family: var(--serif);
+        font-weight: 400;
+        font-size: clamp(
+            2.1rem,
+            7.2vw,
+            5.4rem
+        ); /* was 2.7rem min — now scales down further */
+        line-height: 1.05;
+        letter-spacing: -0.02em;
+        max-width: 15ch;
+        margin-bottom: 20px;
+    }
+    h1 em {
+        font-style: italic;
+        color: var(--accent);
+    }
+
+    .hero-inner {
+        position: relative;
+        z-index: 2;
+        padding-top: 60px;
+    }
+
+    @media (max-width: 600px) {
+        .hero-inner {
+            padding-top: 60px;
+        }
+    }
+
+    .sub {
+        font-size: clamp(1rem, 1.7vw, 1.22rem);
+        color: var(--muted);
+        max-width: 54ch;
+        margin-bottom: 28px;
+        line-height: 1.7;
+    }
+    .sub em {
+        color: var(--text);
+        font-style: normal;
+    }
+
+    .cta {
+        display: flex;
+        gap: 14px;
+        flex-wrap: wrap;
+        align-items: center;
+        margin-bottom: 36px;
+    }
+
+    .btn {
+        font-family: var(--mono);
+        font-size: 0.72rem;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        padding: 11px 18px;
+        border: 1px solid var(--line);
+        border-radius: 2px;
+        color: var(--text);
+        transition: 0.25s;
+        background: transparent;
+        cursor: pointer;
+        display: inline-block;
+    }
+    .btn:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+        transform: translateY(-1px);
+    }
+    .btn.solid {
+        background: var(--accent);
+        color: var(--bg);
+        border-color: var(--accent);
+        font-weight: 500;
+    }
+    .btn.solid:hover {
+        background: var(--accent-soft);
+        border-color: var(--accent-soft);
+        color: var(--bg);
+    }
+
+    .status {
+        font-family: var(--mono);
+        font-size: 0.75rem;
+        color: var(--faint);
+        letter-spacing: 0.04em;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .status .dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--accent);
+        animation: pulse 2.6s infinite;
+    }
+    @keyframes pulse {
+        0% {
+            box-shadow: 0 0 0 0 rgba(215, 162, 74, 0.45);
+        }
+        70% {
+            box-shadow: 0 0 0 9px rgba(215, 162, 74, 0);
+        }
+        100% {
+            box-shadow: 0 0 0 0 rgba(215, 162, 74, 0);
+        }
+    }
+</style>
+
+<script>
+    const glow = document.getElementById("glow");
+    const hero = document.querySelector("header");
+
+    hero?.addEventListener("mousemove", (e) => {
+        if (!glow || !hero) return;
+        const rect = hero.getBoundingClientRect();
+        const x = e.clientX - rect.left - 340; // 340 = half glow width
+        const y = e.clientY - rect.top - 340;
+        glow.style.transform = `translate(${x}px, ${y}px)`;
+    });
+</script>

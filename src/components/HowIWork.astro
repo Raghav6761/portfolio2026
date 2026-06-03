@@ -1,0 +1,113 @@
+---
+const principles = [
+    {
+        n: "01 / 03",
+        title: "I learn your field first.",
+        body: "I start by understanding the problem deeply - your users, edge cases, real-world contraint. The design follows that.",
+    },
+    {
+        n: "02 / 03",
+        title: "Proven, not from zero.",
+        body: "I start from foundations I've already built and own, then shape them to you. You skip both the risk and the timeline of a from-scratch build.",
+    },
+    {
+        n: "03 / 03",
+        title: "The harder, the better.",
+        body: "I'd rather take on a hard problem and figure it out over a trivial one and phone it in. Tell me what's stuck and we'll figure out the solution.",
+    },
+];
+---
+
+<section id="how">
+    <div class="wrap">
+        <div class="sec-head">
+            <span class="num"> 01 </span>
+            <h2>How I Work</h2>
+        </div>
+
+        <p class="sec-intro">What working with me looks like</p>
+
+        <div class="caps">
+            {
+                principles.map((p) => (
+                    <div class="cap">
+                        <div class="n">{p.n}</div>
+                        <h3>{p.title}</h3>
+                        <p>{p.body}</p>
+                    </div>
+                ))
+            }
+        </div>
+    </div>
+</section>
+
+<style>
+    section {
+        padding: 110px 0;
+        border-top: 1px solid var(--line);
+    }
+
+    .sec-head {
+        display: flex;
+        align-items: baseline;
+        gap: 20px;
+        margin-bottom: 22px;
+    }
+    .sec-head .num {
+        font-family: var(--mono);
+        font-size: 0.8rem;
+        color: var(--accent);
+    }
+    .sec-head h2 {
+        font-family: var(--serif);
+        font-weight: 400;
+        font-size: clamp(1.8rem, 3.4vw, 2.7rem);
+        letter-spacing: -0.01em;
+    }
+
+    .sec-intro {
+        color: var(--muted);
+        max-width: 58ch;
+        margin-bottom: 46px;
+        font-size: 1.02rem;
+        line-height: 1.7;
+    }
+
+    .caps {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1px;
+        background: var(--line);
+        border: 1px solid var(--line);
+    }
+    .cap {
+        background: var(--bg);
+        padding: 38px 30px;
+        transition: background 0.3s;
+    }
+    .cap:hover {
+        background: var(--surface);
+    }
+    .cap .n {
+        font-family: var(--mono);
+        font-size: 0.8rem;
+        color: var(--accent);
+        margin-bottom: 22px;
+    }
+    .cap h3 {
+        font-family: var(--serif);
+        font-weight: 500;
+        font-size: 1.4rem;
+        margin-bottom: 14px;
+    }
+    .cap p {
+        color: var(--muted);
+        font-size: 0.95rem;
+    }
+
+    @media (max-width: 760px) {
+        .caps {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>

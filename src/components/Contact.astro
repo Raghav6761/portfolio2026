@@ -1,0 +1,255 @@
+---
+const email = "hello@raghavwatts.com";
+const accessKey = "3a8d327d-626a-4e02-a4e8-8b58d33b10d2";
+---
+
+<section id="contact">
+    <div class="wrap">
+        <h2>Got a problem <em>worth solving?</em></h2>
+        <p class="lead">
+            Tell me what's broken, what's missing, or the thing you keep meaning
+            to start. Odds are I'm already half-built for it — and if not, the
+            harder it sounds, the faster I'll reply.
+        </p>
+
+        <form id="contact-form">
+            <input type="hidden" name="access_key" value={accessKey} />
+            <input
+                type="hidden"
+                name="subject"
+                value="New message from raghavwatts.com"
+            />
+            <input type="hidden" name="from_name" value="raghavwatts.com" />
+            <!-- honeypot: bots fill this, humans don't see it -->
+            <input
+                type="checkbox"
+                name="botcheck"
+                style="display:none"
+                tabindex="-1"
+                autocomplete="off"
+            />
+
+            <div class="row">
+                <div class="field">
+                    <label for="cf-name">Name</label>
+                    <input
+                        id="cf-name"
+                        type="text"
+                        name="name"
+                        required
+                        autocomplete="name"
+                    />
+                </div>
+                <div class="field">
+                    <label for="cf-email">Email</label>
+                    <input
+                        id="cf-email"
+                        type="email"
+                        name="email"
+                        required
+                        autocomplete="email"
+                    />
+                </div>
+            </div>
+
+            <div class="field">
+                <label for="cf-message">What's on your mind?</label>
+                <textarea id="cf-message" name="message" rows="5" required
+                ></textarea>
+            </div>
+
+            <button type="submit" class="btn-send">Send message</button>
+            <div id="cf-status" class="status" aria-live="polite"></div>
+        </form>
+
+        <div class="email-line">
+            or just say hi — <a href={`mailto:${email}`}>{email}</a>
+        </div>
+    </div>
+</section>
+
+<script>
+    const form = document.getElementById(
+        "contact-form",
+    ) as HTMLFormElement | null;
+    const statusEl = document.getElementById("cf-status");
+    const submitBtn = form?.querySelector<HTMLButtonElement>(
+        "button[type=submit]",
+    );
+
+    form?.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        if (!form || !statusEl || !submitBtn) return;
+
+        statusEl.textContent = "";
+        statusEl.className = "status";
+        submitBtn.disabled = true;
+        submitBtn.textContent = "Sending…";
+
+        try {
+            const res = await fetch("https://api.web3forms.com/submit", {
+                method: "POST",
+                body: new FormData(form),
+            });
+            const json = await res.json();
+
+            if (json.success) {
+                form.querySelectorAll("input, textarea, button").forEach(
+                    (el) => {
+                        (el as HTMLInputElement).disabled = true;
+                    },
+                );
+                statusEl.className = "status ok";
+                statusEl.innerHTML =
+                    "<strong>Got it.</strong> I'll reply within 24 hours.";
+            } else {
+                throw new Error(json.message || "Submission failed");
+            }
+        } catch (err) {
+            statusEl.className = "status err";
+            statusEl.textContent =
+                "Something went wrong. Try again, or email me directly below.";
+            submitBtn.disabled = false;
+            submitBtn.textContent = "Send message";
+        }
+    });
+</script>
+
+<style>
+    section {
+        padding: 120px 0;
+        border-top: 1px solid var(--line);
+        text-align: center;
+    }
+
+    h2 {
+        font-family: var(--serif);
+        font-weight: 400;
+        font-size: clamp(2rem, 4.2vw, 3.4rem);
+        line-height: 1.1;
+        letter-spacing: -0.02em;
+        margin: 0 auto 26px;
+        max-width: 16ch;
+    }
+    h2 em {
+        font-style: italic;
+        color: var(--accent);
+    }
+
+    .lead {
+        color: var(--muted);
+        max-width: 56ch;
+        margin: 0 auto 44px;
+        font-size: 1.04rem;
+        line-height: 1.7;
+    }
+
+    form {
+        max-width: 560px;
+        margin: 0 auto;
+        text-align: left;
+    }
+
+    .row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+    }
+
+    .field {
+        margin-bottom: 18px;
+    }
+
+    label {
+        display: block;
+        font-family: var(--mono);
+        font-size: 0.68rem;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin-bottom: 8px;
+    }
+
+    input[type="text"],
+    input[type="email"],
+    textarea {
+        width: 100%;
+        font-family: var(--sans);
+        font-size: 0.98rem;
+        color: var(--text);
+        background: var(--bg-2);
+        border: 1px solid var(--line);
+        border-radius: 2px;
+        padding: 12px 14px;
+        transition: border-color 0.2s;
+    }
+    input:focus,
+    textarea:focus {
+        outline: none;
+        border-color: var(--accent);
+    }
+    textarea {
+        resize: vertical;
+        min-height: 130px;
+        line-height: 1.5;
+    }
+
+    .btn-send {
+        font-family: var(--mono);
+        font-size: 0.72rem;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        padding: 14px 22px;
+        border: 1px solid var(--accent);
+        border-radius: 2px;
+        color: var(--bg);
+        background: var(--accent);
+        font-weight: 500;
+        cursor: pointer;
+        transition: 0.25s;
+        margin-top: 8px;
+    }
+    .btn-send:hover:not(:disabled) {
+        background: var(--accent-soft);
+        border-color: var(--accent-soft);
+    }
+    .btn-send:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+    .status {
+        font-family: var(--mono);
+        font-size: 0.82rem;
+        margin-top: 16px;
+        min-height: 1.2em;
+    }
+    .status.ok {
+        color: var(--accent);
+    }
+    .status.err {
+        color: #ff8b6b;
+    }
+
+    .email-line {
+        font-family: var(--mono);
+        font-size: 0.78rem;
+        color: var(--faint);
+        margin-top: 56px;
+        letter-spacing: 0.04em;
+    }
+    .email-line a {
+        color: var(--accent);
+        transition: color 0.25s;
+    }
+    .email-line a:hover {
+        color: var(--accent-soft);
+    }
+
+    @media (max-width: 600px) {
+        .row {
+            grid-template-columns: 1fr;
+            gap: 0;
+        }
+    }
+</style>
