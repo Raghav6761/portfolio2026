@@ -1,0 +1,21 @@
+---
+
+---
+
+<canvas id="chinook"></canvas>
+
+<script>
+    import { mountChinook } from "../scripts/chinook";
+    const canvas = document.getElementById("chinook") as HTMLCanvasElement;
+    if (canvas) mountChinook(canvas);
+</script>
+
+<style>
+    canvas {
+        display: block;
+        width: 100%;
+        height: min(60vh, 520px);
+        touch-action: none;
+        cursor: grab;
+    }
+</style>

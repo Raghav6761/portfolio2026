@@ -1,0 +1,29 @@
+---
+import Layout from "../layouts/Layout.astro";
+---
+
+<Layout title="World - Raghav Watts">
+    <canvas id="world"></canvas>
+</Layout>
+
+<script>
+    import {mountWorld} from "../scripts/world";
+    const canvas = document.getElementById("world") as HTMLCanvasElement;
+    if (canvas) mountWorld(canvas);
+</script>
+
+<style is:global>
+    html, body{
+        height: 100%;
+        overflow: hidden;
+    }
+</style>
+
+<style>
+    canvas {
+        display: block;
+        width: 100vw;
+        height: 100dvh;
+        touch-action: none;
+    }
+</style>
