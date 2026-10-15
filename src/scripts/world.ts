@@ -604,33 +604,35 @@ export async function mountWorld(canvas: HTMLCanvasElement) {
     function buildTouchUI() {
         const css = document.createElement('style');
         css.textContent = `
-          .tui{position:fixed;inset:auto 0 0 0;pointer-events:none;
-               padding:0 22px calc(22px + env(safe-area-inset-bottom,0px));
-               display:flex;justify-content:space-between;align-items:flex-end;z-index:20}
-          .tui *{pointer-events:auto;touch-action:none;-webkit-tap-highlight-color:transparent}
-          .thr{width:84px;height:172px;border-radius:42px;position:relative;
-               background:rgba(20,17,13,.38);border:1px solid rgba(236,227,212,.22);
-               backdrop-filter:blur(3px)}
-          .thr::before{content:"";position:absolute;left:50%;top:16px;bottom:16px;width:2px;
-               margin-left:-1px;background:rgba(236,227,212,.16);border-radius:1px}
-          .thr i{position:absolute;left:50%;top:50%;width:60px;height:60px;margin:-30px 0 0 -30px;
-                 border-radius:50%;background:rgba(215,162,74,.78);
-                 box-shadow:0 2px 10px rgba(0,0,0,.4);transition:transform .06s linear}
-          .alt{display:flex;flex-direction:column;gap:14px}
-          .alt button{width:62px;height:62px;border-radius:50%;font-size:19px;line-height:1;
-                 color:#ECE3D4;background:rgba(20,17,13,.38);cursor:pointer;
-                 border:1px solid rgba(236,227,212,.22);backdrop-filter:blur(3px)}
-          .alt button:active{background:rgba(215,162,74,.55);color:#14110D}
+            .tui{position:fixed;inset:auto 0 0 0;pointer-events:none;
+                    padding:0 22px calc(22px + env(safe-area-inset-bottom,0px));
+                    display:flex;justify-content:space-between;align-items:flex-end;z-index:20}
+            .hit{pointer-events:auto;touch-action:none;padding:16px;
+                    -webkit-tap-highlight-color:transparent}
+            .hit *{touch-action:none;-webkit-tap-highlight-color:transparent}
+            .thr{width:84px;height:172px;border-radius:42px;position:relative;
+                    background:rgba(20,17,13,.38);border:1px solid rgba(236,227,212,.22);
+                    backdrop-filter:blur(3px)}
+            .thr::before{content:"";position:absolute;left:50%;top:16px;bottom:16px;width:2px;
+                    margin-left:-1px;background:rgba(236,227,212,.16);border-radius:1px}
+            .thr i{position:absolute;left:50%;top:50%;width:60px;height:60px;margin:-30px 0 0 -30px;
+                    border-radius:50%;background:rgba(215,162,74,.78);
+                    box-shadow:0 2px 10px rgba(0,0,0,.4);transition:transform .06s linear}
+            .alt{display:flex;flex-direction:column;gap:14px}
+            .alt button{width:62px;height:62px;border-radius:50%;font-size:19px;line-height:1;
+                    color:#ECE3D4;background:rgba(20,17,13,.38);cursor:pointer;
+                    border:1px solid rgba(236,227,212,.22);backdrop-filter:blur(3px)}
+            .alt button:active{background:rgba(215,162,74,.55);color:#14110D}
           @media (min-width:900px) and (pointer:fine){.tui{display:none}}`;
         document.head.appendChild(css);
 
         const ui = document.createElement('div');
         ui.className = 'tui';
-        ui.innerHTML = `<div class="thr"><i></i></div>
-          <div class="alt">
+        ui.innerHTML = `<div class="hit"><div class="thr"><i></i></div></div>
+          <div class="hit"><div class="alt">
             <button type="button" data-lift="1" aria-label="Climb">&#9650;</button>
             <button type="button" data-lift="-1" aria-label="Descend">&#9660;</button>
-          </div>`;
+          </div></div>`;
         document.body.appendChild(ui);
 
         const track = ui.querySelector('.thr') as HTMLElement;
