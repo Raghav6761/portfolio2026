@@ -594,7 +594,7 @@ export async function mountWorld(canvas: HTMLCanvasElement) {
 
     // Touch writes into the same two numbers the keyboard does, so the same fly() code works for both.
     // downstream - bank, move, tilt, yaw, agility remain untouched
-    let touchTurn = 0;   // -1 left, +1 right, 0 none — set by touch, used in fly()
+    // let touchTurn = 0;   // -1 left, +1 right, 0 none — set by touch, used in fly()
     let touchThrust = 0;        // -1, 0 or +1 — fore/aft stick
     let touchLift = 0;        // -1, 0 or +1 — up/down stick
 
@@ -604,14 +604,16 @@ export async function mountWorld(canvas: HTMLCanvasElement) {
     function buildTouchUI() {
         const css = document.createElement('style');
         css.textContent = `
-          .tui{position:fixed;inset:auto 0 0 0;height:190px;pointer-events:none;
+          .tui{position:fixed;inset:auto 0 0 0;pointer-events:none;
                padding:0 22px calc(22px + env(safe-area-inset-bottom,0px));
                display:flex;justify-content:space-between;align-items:flex-end;z-index:20}
           .tui *{pointer-events:auto;touch-action:none;-webkit-tap-highlight-color:transparent}
-          .stk{width:132px;height:132px;border-radius:50%;position:relative;
+          .thr{width:84px;height:172px;border-radius:42px;position:relative;
                background:rgba(20,17,13,.38);border:1px solid rgba(236,227,212,.22);
                backdrop-filter:blur(3px)}
-          .stk i{position:absolute;left:50%;top:50%;width:54px;height:54px;margin:-27px 0 0 -27px;
+          .thr::before{content:"";position:absolute;left:50%;top:16px;bottom:16px;width:2px;
+               margin-left:-1px;background:rgba(236,227,212,.16);border-radius:1px}
+          .thr i{position:absolute;left:50%;top:50%;width:60px;height:60px;margin:-30px 0 0 -30px;
                  border-radius:50%;background:rgba(215,162,74,.78);
                  box-shadow:0 2px 10px rgba(0,0,0,.4);transition:transform .06s linear}
           .alt{display:flex;flex-direction:column;gap:14px}
@@ -624,43 +626,66 @@ export async function mountWorld(canvas: HTMLCanvasElement) {
 
         const ui = document.createElement('div');
         ui.className = 'tui';
-        ui.innerHTML = `<div class="stk"><i></i></div>
+        ui.innerHTML = `<div class="thr"><i></i></div>
           <div class="alt">
             <button type="button" data-lift="1" aria-label="Climb">&#9650;</button>
             <button type="button" data-lift="-1" aria-label="Descend">&#9660;</button>
           </div>`;
         document.body.appendChild(ui);
 
-        const stick = ui.querySelector('.stk') as HTMLElement;
-        const knob = stick.querySelector('i') as HTMLElement;
-        const R = 39;      // px the knob may travel from centre
+        const track = ui.querySelector('.thr') as HTMLElement;
+        const knob = track.querySelector('i') as HTMLElement;
+        const R = 52;      // px the knob may travel from centre
         const DEAD = 0.14; // below this, treat as zero — thumbs are not precise
 
-        const settle = (dx: number, dy: number) => {
-            // const d = Math.hypot(dx, dy) || 1;
-            // const k = Math.min(1, d / R) / d;          // clamp to the ring
-            const d = Math.hypot(dx, dy);
-            const k = d > 1 ? 1 / d : 1;    // clamp to the unit circle; don't rescale inside it
-            const nx = dx * k, ny = dy * k;
-            knob.style.transform = `translate(${nx * R}px, ${ny * R}px)`;
-            const cut = (v: number) => Math.abs(v) < DEAD ? 0 : v;
-            touchTurn = cut(-nx);   // right on the stick banks right: turn is +1 for LEFT
-            touchThrust = cut(-ny);   // up on the stick is forward; screen Y grows downward
+        // const settle = (dx: number, dy: number) => {
+        //     // const d = Math.hypot(dx, dy) || 1;
+        //     // const k = Math.min(1, d / R) / d;          // clamp to the ring
+        //     const d = Math.hypot(dx, dy);
+        //     const k = d > 1 ? 1 / d : 1;    // clamp to the unit circle; don't rescale inside it
+        //     const nx = dx * k, ny = dy * k;
+        //     knob.style.transform = `translate(${nx * R}px, ${ny * R}px)`;
+        //     const cut = (v: number) => Math.abs(v) < DEAD ? 0 : v;
+        //     touchTurn = cut(-nx);   // right on the stick banks right: turn is +1 for LEFT
+        //     touchThrust = cut(-ny);   // up on the stick is forward; screen Y grows downward
+        // };
+
+        const settle = (dy: number) => {
+            const ny = Math.max(-1, Math.min(1, dy));     // one axis, so a plain clamp
+            knob.style.transform = `translateY(${ny * R}px)`;
+            // touchThrust = Math.abs(ny) < DEAD ? 0 : -ny;  // screen Y grows downward
+            // Ramp from 0 at the deadzone edge instead of jumping to 0.14 — otherwise
+            // the first millimetre of travel is worth 14% throttle and nothing below it.
+            const m = Math.abs(ny);
+            touchThrust = m < DEAD ? 0 : -Math.sign(ny) * (m - DEAD) / (1 - DEAD);
         };
 
-        stick.addEventListener('pointerdown', (e) => {
-            stick.setPointerCapture(e.pointerId);
-            const r = stick.getBoundingClientRect();
-            settle((e.clientX - (r.left + r.width / 2)) / R, (e.clientY - (r.top + r.height / 2)) / R);
+        // stick.addEventListener('pointerdown', (e) => {
+        //     stick.setPointerCapture(e.pointerId);
+        //     const r = stick.getBoundingClientRect();
+        //     settle((e.clientX - (r.left + r.width / 2)) / R, (e.clientY - (r.top + r.height / 2)) / R);
+        // });
+        // stick.addEventListener('pointermove', (e) => {
+        //     if (!stick.hasPointerCapture(e.pointerId)) return;
+        //     const r = stick.getBoundingClientRect();
+        //     settle((e.clientX - (r.left + r.width / 2)) / R, (e.clientY - (r.top + r.height / 2)) / R);
+        // });
+        // const release = () => { touchTurn = 0; touchThrust = 0; knob.style.transform = ''; };
+        // stick.addEventListener('pointerup', release);
+        // stick.addEventListener('pointercancel', release);
+
+        const at = (e: PointerEvent) => {
+            const r = track.getBoundingClientRect();
+            settle((e.clientY - (r.top + r.height / 2)) / R);
+        };
+        track.addEventListener('pointerdown', (e) => { track.setPointerCapture(e.pointerId); at(e); });
+        track.addEventListener('pointermove', (e) => {
+            if (track.hasPointerCapture(e.pointerId)) at(e);
         });
-        stick.addEventListener('pointermove', (e) => {
-            if (!stick.hasPointerCapture(e.pointerId)) return;
-            const r = stick.getBoundingClientRect();
-            settle((e.clientX - (r.left + r.width / 2)) / R, (e.clientY - (r.top + r.height / 2)) / R);
-        });
-        const release = () => { touchTurn = 0; touchThrust = 0; knob.style.transform = ''; };
-        stick.addEventListener('pointerup', release);
-        stick.addEventListener('pointercancel', release);
+        const release = () => { touchThrust = 0; knob.style.transform = ''; };
+        track.addEventListener('pointerup', release);
+        track.addEventListener('pointercancel', release);
+        track.addEventListener('lostpointercapture', release);
 
         ui.querySelectorAll<HTMLButtonElement>('.alt button').forEach((b) => {
             const v = Number(b.dataset.lift);
@@ -668,6 +693,7 @@ export async function mountWorld(canvas: HTMLCanvasElement) {
             const off = () => { touchLift = 0; };
             b.addEventListener('pointerup', off);
             b.addEventListener('pointercancel', off);
+            b.addEventListener('lostpointercapture', off);
         });
     }
 
@@ -689,7 +715,7 @@ export async function mountWorld(canvas: HTMLCanvasElement) {
         turn = 0;
         if (keys.has('KeyA') || keys.has('ArrowLeft')) turn += 1;
         if (keys.has('KeyD') || keys.has('ArrowRight')) turn -= 1;
-        turn = Math.max(-1, Math.min(1, turn + touchTurn));
+        // turn = Math.max(-1, Math.min(1, turn + touchTurn));
         // const yaw = turn * TURN_RATE * dt;
         throttle = 0;
         if (keys.has('KeyW') || keys.has('ArrowUp')) throttle += 1;
