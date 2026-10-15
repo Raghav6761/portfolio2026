@@ -592,8 +592,92 @@ export async function mountWorld(canvas: HTMLCanvasElement) {
     let orbitBank = 0;        // lean induced by dragging the camera
     const ORBIT_BANK = 0.15;  // radians of lean per rad/s of camera-induced turn
 
+    // Touch writes into the same two numbers the keyboard does, so the same fly() code works for both.
+    // downstream - bank, move, tilt, yaw, agility remain untouched
+    let touchTurn = 0;   // -1 left, +1 right, 0 none — set by touch, used in fly()
+    let touchThrust = 0;        // -1, 0 or +1 — fore/aft stick
+    let touchLift = 0;        // -1, 0 or +1 — up/down stick
+
+    // The stick is a DOM sibling of the canvas, not drawn into it. That matters:
+    // OrbitControls listens on `canvas`, so a pointer landing on the stick never
+    // reaches it and the two can't fight over the same finger.
+    function buildTouchUI() {
+        const css = document.createElement('style');
+        css.textContent = `
+          .tui{position:fixed;inset:auto 0 0 0;height:190px;pointer-events:none;
+               padding:0 22px calc(22px + env(safe-area-inset-bottom,0px));
+               display:flex;justify-content:space-between;align-items:flex-end;z-index:20}
+          .tui *{pointer-events:auto;touch-action:none;-webkit-tap-highlight-color:transparent}
+          .stk{width:132px;height:132px;border-radius:50%;position:relative;
+               background:rgba(20,17,13,.38);border:1px solid rgba(236,227,212,.22);
+               backdrop-filter:blur(3px)}
+          .stk i{position:absolute;left:50%;top:50%;width:54px;height:54px;margin:-27px 0 0 -27px;
+                 border-radius:50%;background:rgba(215,162,74,.78);
+                 box-shadow:0 2px 10px rgba(0,0,0,.4);transition:transform .06s linear}
+          .alt{display:flex;flex-direction:column;gap:14px}
+          .alt button{width:62px;height:62px;border-radius:50%;font-size:19px;line-height:1;
+                 color:#ECE3D4;background:rgba(20,17,13,.38);cursor:pointer;
+                 border:1px solid rgba(236,227,212,.22);backdrop-filter:blur(3px)}
+          .alt button:active{background:rgba(215,162,74,.55);color:#14110D}
+          @media (min-width:900px) and (pointer:fine){.tui{display:none}}`;
+        document.head.appendChild(css);
+
+        const ui = document.createElement('div');
+        ui.className = 'tui';
+        ui.innerHTML = `<div class="stk"><i></i></div>
+          <div class="alt">
+            <button type="button" data-lift="1" aria-label="Climb">&#9650;</button>
+            <button type="button" data-lift="-1" aria-label="Descend">&#9660;</button>
+          </div>`;
+        document.body.appendChild(ui);
+
+        const stick = ui.querySelector('.stk') as HTMLElement;
+        const knob = stick.querySelector('i') as HTMLElement;
+        const R = 39;      // px the knob may travel from centre
+        const DEAD = 0.14; // below this, treat as zero — thumbs are not precise
+
+        const settle = (dx: number, dy: number) => {
+            // const d = Math.hypot(dx, dy) || 1;
+            // const k = Math.min(1, d / R) / d;          // clamp to the ring
+            const d = Math.hypot(dx, dy);
+            const k = d > 1 ? 1 / d : 1;    // clamp to the unit circle; don't rescale inside it
+            const nx = dx * k, ny = dy * k;
+            knob.style.transform = `translate(${nx * R}px, ${ny * R}px)`;
+            const cut = (v: number) => Math.abs(v) < DEAD ? 0 : v;
+            touchTurn = cut(-nx);   // right on the stick banks right: turn is +1 for LEFT
+            touchThrust = cut(-ny);   // up on the stick is forward; screen Y grows downward
+        };
+
+        stick.addEventListener('pointerdown', (e) => {
+            stick.setPointerCapture(e.pointerId);
+            const r = stick.getBoundingClientRect();
+            settle((e.clientX - (r.left + r.width / 2)) / R, (e.clientY - (r.top + r.height / 2)) / R);
+        });
+        stick.addEventListener('pointermove', (e) => {
+            if (!stick.hasPointerCapture(e.pointerId)) return;
+            const r = stick.getBoundingClientRect();
+            settle((e.clientX - (r.left + r.width / 2)) / R, (e.clientY - (r.top + r.height / 2)) / R);
+        });
+        const release = () => { touchTurn = 0; touchThrust = 0; knob.style.transform = ''; };
+        stick.addEventListener('pointerup', release);
+        stick.addEventListener('pointercancel', release);
+
+        ui.querySelectorAll<HTMLButtonElement>('.alt button').forEach((b) => {
+            const v = Number(b.dataset.lift);
+            b.addEventListener('pointerdown', (e) => { b.setPointerCapture(e.pointerId); touchLift = v; });
+            const off = () => { touchLift = 0; };
+            b.addEventListener('pointerup', off);
+            b.addEventListener('pointercancel', off);
+        });
+    }
+
+    if (matchMedia('(pointer: coarse)').matches) buildTouchUI();
+    else addEventListener('touchstart', function once() {
+        removeEventListener('touchstart', once); buildTouchUI();   // hybrid laptops
+    }, { once: true });
+
     function fly(dt: number) {
-        const agility = 0.5 + 0.82 * Math.abs(throttle);
+        const agility = 0.5 + 0.5 * Math.abs(throttle);
         // ── turning ──────────────────────────────────────────────────────
         // OrbitControls rewrites camera.quaternion from `target` on every update,
         // so yawing the camera directly gets thrown away. Swing the target around
@@ -605,10 +689,12 @@ export async function mountWorld(canvas: HTMLCanvasElement) {
         turn = 0;
         if (keys.has('KeyA') || keys.has('ArrowLeft')) turn += 1;
         if (keys.has('KeyD') || keys.has('ArrowRight')) turn -= 1;
+        turn = Math.max(-1, Math.min(1, turn + touchTurn));
         // const yaw = turn * TURN_RATE * dt;
         throttle = 0;
         if (keys.has('KeyW') || keys.has('ArrowUp')) throttle += 1;
         if (keys.has('KeyS') || keys.has('ArrowDown')) throttle -= 1;
+        throttle = Math.max(-1, Math.min(1, throttle + touchThrust));
 
         // A helicopter carves a turn because it's moving. Yawing at full rate while
         // stationary is what makes it read as a turntable rather than an aircraft.
@@ -647,17 +733,20 @@ export async function mountWorld(canvas: HTMLCanvasElement) {
         move.set(0, 0, 0);
         // if (keys.has('KeyW') || keys.has('ArrowUp')) move.add(fwd);
         // if (keys.has('KeyS') || keys.has('ArrowDown')) move.sub(fwd);
-        if (throttle > 0) move.add(fwd);
-        if (throttle < 0) move.sub(fwd);
+        // if (throttle > 0) move.add(fwd);
+        // if (throttle < 0) move.sub(fwd);
+        move.addScaledVector(fwd, throttle);
         // if (keys.has('KeyE')) move.add(rgt);          // strafe, still handy
         // if (keys.has('KeyQ')) move.sub(rgt);
         if (keys.has('KeyE')) move.y += 1;
         if (keys.has('KeyQ')) move.y -= 1;
         if (keys.has('Space')) move.y += 1;
         if (keys.has('KeyC')) move.y -= 1;
+        move.y += touchLift;
 
         if (move.lengthSq() === 0) return;
-        move.normalize().multiplyScalar((keys.has('ShiftLeft') ? 120 : 40) * dt);
+        // move.normalize().multiplyScalar((keys.has('ShiftLeft') ? 120 : 40) * dt);
+        move.clampLength(0, 1).multiplyScalar((keys.has('ShiftLeft') ? 120 : 40) * dt);
 
         // Test where the step would LAND before committing it, and drop only the
         // offending axis — so you slide along the boundary instead of stopping dead.
