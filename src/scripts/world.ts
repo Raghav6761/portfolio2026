@@ -573,7 +573,7 @@ export async function mountWorld(canvas: HTMLCanvasElement) {
     addEventListener('keyup', (e) => keys.delete(e.code));
 
     const fwd = new THREE.Vector3();
-    // const rgt = new THREE.Vector3();
+    const rgt = new THREE.Vector3();
     const UP = new THREE.Vector3(0, 1, 0);
     const move = new THREE.Vector3();
     const offset = new THREE.Vector3();
@@ -594,7 +594,8 @@ export async function mountWorld(canvas: HTMLCanvasElement) {
 
     // Touch writes into the same numbers the keyboard does, so one fly() serves
     // both. Everything downstream - bank, move, tilt, yaw, agility - is untouched.
-    let touchTurn = 0;      // -1..+1 analog, left stick X (+1 is LEFT, same as KeyA)
+    let touchStrafe = 0;    // -1..+1 analog, left stick X -> sideways MOVEMENT, never turn
+    let strafeBank = 0;     // cosmetic lean into a sideways slide (craftTilt only)
     let touchThrust = 0;    // -1..+1 analog, left stick Y
     let touchLift = 0;      // -1, 0 or +1, climb/descend buttons
 
@@ -749,7 +750,7 @@ export async function mountWorld(canvas: HTMLCanvasElement) {
             const k = d > 1 ? 1 / d : 1;   // clamp to the ring; do NOT rescale inside it
             const nx = dx * k, ny = dy * k;
             knob.style.transform = `translate(${nx * R}px, ${ny * R}px)`;
-            touchTurn = -ramp(nx);         // stick right banks right; turn is +1 for LEFT
+            touchStrafe = ramp(nx);        // rgt = fwd x UP points right, so no negation
             touchThrust = -ramp(ny);       // screen Y grows downward
         };
 
@@ -771,7 +772,7 @@ export async function mountWorld(canvas: HTMLCanvasElement) {
         const drop = (e: PointerEvent) => {
             if (e.pointerId !== stickId) return;
             stickId = null;
-            touchTurn = 0; touchThrust = 0;
+            touchStrafe = 0; touchThrust = 0;
             ring.classList.remove('on');
             knob.style.transform = '';
         };
@@ -811,7 +812,10 @@ export async function mountWorld(canvas: HTMLCanvasElement) {
         turn = 0;
         if (keys.has('KeyA') || keys.has('ArrowLeft')) turn += 1;
         if (keys.has('KeyD') || keys.has('ArrowRight')) turn -= 1;
-        turn = Math.max(-1, Math.min(1, turn + touchTurn));
+        // NOTE: touch deliberately does NOT feed `turn`. `turn` drives bank, bank
+        // drives keyYaw, and keyYaw rotates controls.target around the camera --
+        // so wiring the left stick here is what made it move the view. On touch,
+        // turning is the right-side camera drag; the nose follows via fwd.
         // const yaw = turn * TURN_RATE * dt;
         throttle = 0;
         if (keys.has('KeyW') || keys.has('ArrowUp')) throttle += 1;
@@ -850,7 +854,7 @@ export async function mountWorld(canvas: HTMLCanvasElement) {
         fwd.subVectors(controls.target, camera.position);
         fwd.y = 0;
         fwd.normalize();
-        // rgt.crossVectors(fwd, UP).normalize();
+        rgt.crossVectors(fwd, UP).normalize();   // +rgt is starboard
 
         move.set(0, 0, 0);
         // if (keys.has('KeyW') || keys.has('ArrowUp')) move.add(fwd);
@@ -858,6 +862,7 @@ export async function mountWorld(canvas: HTMLCanvasElement) {
         // if (throttle > 0) move.add(fwd);
         // if (throttle < 0) move.sub(fwd);
         move.addScaledVector(fwd, throttle);
+        move.addScaledVector(rgt, touchStrafe);   // sideways, no heading change
         // if (keys.has('KeyE')) move.add(rgt);          // strafe, still handy
         // if (keys.has('KeyQ')) move.sub(rgt);
         if (keys.has('KeyE')) move.y += 1;
@@ -924,7 +929,9 @@ export async function mountWorld(canvas: HTMLCanvasElement) {
         // const targetBank = turn * BANK_ANGLE;
         // bank += (targetBank - bank) * Math.min(1, dt * BANK_RESPONSE);
 
-        craftTilt.rotation.z = bank + orbitBank;
+        const targetStrafeBank = touchStrafe * BANK_ANGLE * 0.6;
+        strafeBank += (targetStrafeBank - strafeBank) * Math.min(1, dt * BANK_RESPONSE);
+        craftTilt.rotation.z = bank + orbitBank + strafeBank;
 
         clockT += dt;
         // Real anti-collision beacons flash around 45/min. Just under 1 Hz reads as
