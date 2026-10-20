@@ -603,9 +603,10 @@ export async function mountWorld(canvas: HTMLCanvasElement) {
     // ONE OWNER PER SCREEN REGION. The overlay layers are SIBLINGS of the canvas,
     // never nested. That is the whole fix: a pointerdown on a button bubbles up
     // through its ancestors, so a button placed INSIDE the look layer still
-    // reaches OrbitControls - which is why stopPropagation, hit areas and
-    // pointer-events juggling all failed here. As siblings, with .wlook lowest in
-    // z, every pointer has exactly one owner and nothing needs suppressing.
+    // reaches OrbitControls. As siblings, with .wlook lowest in z, every pointer
+    // has exactly one owner. That alone is NOT sufficient: OrbitControls listens
+    // for pointermove on ownerDocument once any drag begins, so see the end of
+    // buildTouchUI() where the stick's events are stopped before they get there.
     //
     //   canvas    z 0
     //   .wlook    z 10   OrbitControls is re-pointed here via connect()
@@ -792,6 +793,24 @@ export async function mountWorld(canvas: HTMLCanvasElement) {
             b.addEventListener('pointercancel', off);
             b.addEventListener('lostpointercapture', off);
         });
+
+        // OrbitControls attaches its pointermove listener to ownerDocument, NOT to
+        // the element it was connected to (OrbitControls.js:1561). So the moment a
+        // finger is down on the look layer, every pointermove on the page reaches
+        // it -- the stick's included -- and _handleTouchMoveRotate takes the last
+        // mover's pageX as camera drag. That is why holding the right side and then
+        // working the stick swung the view.
+        //
+        // Sibling layers don't prevent it and neither does setPointerCapture:
+        // captured events still bubble to document. Stopping propagation at the
+        // stick does. Registered after the handlers above, so those still run.
+        // Measured on the live build, finger resting, path curvature over ~1s:
+        //   forward 52.7 deg -> -1.0 deg,  strafe 45.2 deg -> 0.4 deg
+        for (const el of [stick, mod.querySelector('.wlift') as HTMLElement]) {
+            for (const t of ['pointerdown', 'pointermove', 'pointerup', 'pointercancel'] as const) {
+                el.addEventListener(t, (e) => e.stopPropagation());
+            }
+        }
     }
 
     if (matchMedia('(pointer: coarse)').matches) buildTouchUI();
