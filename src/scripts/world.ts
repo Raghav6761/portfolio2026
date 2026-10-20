@@ -592,107 +592,201 @@ export async function mountWorld(canvas: HTMLCanvasElement) {
     let orbitBank = 0;        // lean induced by dragging the camera
     const ORBIT_BANK = 0.15;  // radians of lean per rad/s of camera-induced turn
 
-    // Touch writes into the same two numbers the keyboard does, so the same fly() code works for both.
-    // downstream - bank, move, tilt, yaw, agility remain untouched
-    // let touchTurn = 0;   // -1 left, +1 right, 0 none — set by touch, used in fly()
-    let touchThrust = 0;        // -1, 0 or +1 — fore/aft stick
-    let touchLift = 0;        // -1, 0 or +1 — up/down stick
+    // Touch writes into the same numbers the keyboard does, so one fly() serves
+    // both. Everything downstream - bank, move, tilt, yaw, agility - is untouched.
+    let touchTurn = 0;      // -1..+1 analog, left stick X (+1 is LEFT, same as KeyA)
+    let touchThrust = 0;    // -1..+1 analog, left stick Y
+    let touchLift = 0;      // -1, 0 or +1, climb/descend buttons
 
-    // The stick is a DOM sibling of the canvas, not drawn into it. That matters:
-    // OrbitControls listens on `canvas`, so a pointer landing on the stick never
-    // reaches it and the two can't fight over the same finger.
-    function buildTouchUI() {
-        const css = document.createElement('style');
-        css.textContent = `
-            .tui{position:fixed;inset:auto 0 0 0;pointer-events:none;
-                    padding:0 22px calc(22px + env(safe-area-inset-bottom,0px));
-                    display:flex;justify-content:space-between;align-items:flex-end;z-index:20}
-            .hit{pointer-events:auto;touch-action:none;padding:16px;
-                    -webkit-tap-highlight-color:transparent}
-            .hit *{touch-action:none;-webkit-tap-highlight-color:transparent}
-            .thr{width:84px;height:172px;border-radius:42px;position:relative;
-                    background:rgba(20,17,13,.38);border:1px solid rgba(236,227,212,.22);
-                    backdrop-filter:blur(3px)}
-            .thr::before{content:"";position:absolute;left:50%;top:16px;bottom:16px;width:2px;
-                    margin-left:-1px;background:rgba(236,227,212,.16);border-radius:1px}
-            .thr i{position:absolute;left:50%;top:50%;width:60px;height:60px;margin:-30px 0 0 -30px;
-                    border-radius:50%;background:rgba(215,162,74,.78);
-                    box-shadow:0 2px 10px rgba(0,0,0,.4);transition:transform .06s linear}
-            .alt{display:flex;flex-direction:column;gap:14px}
-            .alt button{width:62px;height:62px;border-radius:50%;font-size:19px;line-height:1;
-                    color:#ECE3D4;background:rgba(20,17,13,.38);cursor:pointer;
-                    border:1px solid rgba(236,227,212,.22);backdrop-filter:blur(3px)}
-            .alt button:active{background:rgba(215,162,74,.55);color:#14110D}
-          @media (min-width:900px) and (pointer:fine){.tui{display:none}}`;
-        document.head.appendChild(css);
+    // -- touch + HUD -----------------------------------------------------
+    // ONE OWNER PER SCREEN REGION. The overlay layers are SIBLINGS of the canvas,
+    // never nested. That is the whole fix: a pointerdown on a button bubbles up
+    // through its ancestors, so a button placed INSIDE the look layer still
+    // reaches OrbitControls - which is why stopPropagation, hit areas and
+    // pointer-events juggling all failed here. As siblings, with .wlook lowest in
+    // z, every pointer has exactly one owner and nothing needs suppressing.
+    //
+    //   canvas    z 0
+    //   .wlook    z 10   OrbitControls is re-pointed here via connect()
+    //   .wstick   z 20   left 44%, floating stick - movement only
+    //   .wmod     z 30   climb/descend buttons + altimeter
+    const PEAK_Y = terrainBox.max.y;        // ~124.01
+    const TAPE_TOP = CEILING + 16;          // headroom so the lid is drawn, not discovered
+    const U_TO_M = 3;                       // 1 unit ~ 3 m (CRAFT_LENGTH 10 on a ~30 m Chinook)
 
-        const ui = document.createElement('div');
-        ui.className = 'tui';
-        ui.innerHTML = `<div class="hit"><div class="thr"><i></i></div></div>
-          <div class="hit"><div class="alt">
+    const hudCss = document.createElement('style');
+    hudCss.textContent = `
+        .wlook{position:fixed;inset:0;z-index:10;touch-action:none}
+        .wstick{position:fixed;left:0;top:0;bottom:0;width:44%;z-index:20;
+            touch-action:none;-webkit-tap-highlight-color:transparent}
+        .wring{position:fixed;width:124px;height:124px;margin:-62px 0 0 -62px;z-index:21;
+            border-radius:50%;pointer-events:none;opacity:0;transition:opacity .12s;
+            background:rgba(20,17,13,.30);border:1px solid rgba(236,227,212,.20);
+            backdrop-filter:blur(3px)}
+        .wring.on{opacity:1}
+        .wring::before,.wring::after{content:"";position:absolute;background:rgba(236,227,212,.13)}
+        .wring::before{left:50%;top:14px;bottom:14px;width:1px;margin-left:-.5px}
+        .wring::after{top:50%;left:14px;right:14px;height:1px;margin-top:-.5px}
+        .wring i{position:absolute;left:50%;top:50%;width:54px;height:54px;margin:-27px 0 0 -27px;
+            border-radius:50%;background:rgba(215,162,74,.80);box-shadow:0 2px 12px rgba(0,0,0,.45)}
+        .wmod{position:fixed;z-index:30;display:flex;align-items:stretch;gap:10px;
+            pointer-events:none;
+            right:max(10px,env(safe-area-inset-right,0px));
+            top:calc(16px + env(safe-area-inset-top,0px));
+            bottom:calc(12px + env(safe-area-inset-bottom,0px))}
+        .wlift{display:none;flex-direction:column;justify-content:center;gap:12px;
+            pointer-events:auto}
+        .wlift button{width:56px;height:56px;border-radius:50%;font-family:inherit;
+            font-size:17px;font-weight:600;line-height:1;color:#ECE3D4;
+            background:rgba(32,27,20,.58);border:1px solid #322A1F;
+            backdrop-filter:blur(5px);cursor:pointer;touch-action:none;
+            -webkit-tap-highlight-color:transparent;transition:background .1s,color .1s}
+        .wlift button.on{background:#D7A24A;color:#14110D;border-color:#D7A24A}
+        .walt{width:54px;display:flex;flex-direction:column;gap:5px}
+        .wtape{position:relative;flex:1;min-height:92px;border-radius:7px;overflow:hidden;
+            background:rgba(20,17,13,.52);border:1px solid #322A1F;backdrop-filter:blur(5px)}
+        .wfill{position:absolute;left:0;right:0;bottom:0;border-top:1.5px solid #D7A24A;
+            background:linear-gradient(to top,rgba(215,162,74,.46),rgba(215,162,74,.16))}
+        .wband{position:absolute;left:0;right:0;top:0;background:repeating-linear-gradient(
+            -45deg,rgba(217,71,43,.34) 0 4px,rgba(217,71,43,.10) 4px 8px)}
+        .wmark{position:absolute;left:0;right:0;height:1px;background:rgba(236,227,212,.30)}
+        .wmark span{position:absolute;right:3px;bottom:2px;font-size:8px;letter-spacing:.06em;
+            color:#A2937D}
+        .wmark.ceil{background:#D9472B}
+        .wmark.ceil span{color:#D9472B}
+        .wread{text-align:center;padding:5px 2px;border-radius:7px;
+            font-family:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+            font-variant-numeric:tabular-nums;background:rgba(32,27,20,.62);
+            border:1px solid #322A1F;backdrop-filter:blur(5px);color:#ECE3D4;
+            transition:background .14s,border-color .14s,color .14s}
+        .wread b{display:block;font-size:15px;font-weight:700;line-height:1.1}
+        .wread em{display:block;font-size:8px;font-style:normal;color:#A2937D;line-height:1.3}
+        .wread.warn{background:rgba(224,163,47,.22);border-color:#E0A32F;color:#E0A32F}
+        .wread.warn em{color:#E0A32F}
+        .wread.crit{background:rgba(217,71,43,.26);border-color:#D9472B;color:#F6C9BE}
+        .wread.crit em{color:#F6C9BE}
+        @media (prefers-reduced-motion:reduce){.wring,.wlift button,.wread{transition:none}}`;
+    document.head.appendChild(hudCss);
+
+    const mod = document.createElement('div');
+    mod.className = 'wmod';
+    mod.innerHTML = `<div class="wlift">
             <button type="button" data-lift="1" aria-label="Climb">&#9650;</button>
             <button type="button" data-lift="-1" aria-label="Descend">&#9660;</button>
-          </div></div>`;
-        document.body.appendChild(ui);
+        </div>
+        <div class="walt">
+            <div class="wtape">
+                <div class="wband"></div><div class="wfill"></div>
+                <div class="wmark ceil"><span>CEIL ${Math.round(CEILING)}</span></div>
+                <div class="wmark peak"><span>PEAK ${Math.round(PEAK_Y)}</span></div>
+            </div>
+            <div class="wread"><b>0</b><em>0 m</em></div>
+        </div>`;
+    document.body.appendChild(mod);
 
-        const track = ui.querySelector('.thr') as HTMLElement;
-        const knob = track.querySelector('i') as HTMLElement;
-        const R = 52;      // px the knob may travel from centre
-        const DEAD = 0.14; // below this, treat as zero — thumbs are not precise
+    const tapePct = (y: number) => (Math.max(0, Math.min(TAPE_TOP, y)) / TAPE_TOP) * 100;
+    const elFill = mod.querySelector('.wfill') as HTMLElement;
+    const elRead = mod.querySelector('.wread') as HTMLElement;
+    const elNum = mod.querySelector('.wread b') as HTMLElement;
+    const elMtr = mod.querySelector('.wread em') as HTMLElement;
+    (mod.querySelector('.wband') as HTMLElement).style.bottom = tapePct(CEILING) + '%';
+    (mod.querySelector('.wmark.ceil') as HTMLElement).style.bottom = tapePct(CEILING) + '%';
+    (mod.querySelector('.wmark.peak') as HTMLElement).style.bottom = tapePct(PEAK_Y) + '%';
 
-        // const settle = (dx: number, dy: number) => {
-        //     // const d = Math.hypot(dx, dy) || 1;
-        //     // const k = Math.min(1, d / R) / d;          // clamp to the ring
-        //     const d = Math.hypot(dx, dy);
-        //     const k = d > 1 ? 1 / d : 1;    // clamp to the unit circle; don't rescale inside it
-        //     const nx = dx * k, ny = dy * k;
-        //     knob.style.transform = `translate(${nx * R}px, ${ny * R}px)`;
-        //     const cut = (v: number) => Math.abs(v) < DEAD ? 0 : v;
-        //     touchTurn = cut(-nx);   // right on the stick banks right: turn is +1 for LEFT
-        //     touchThrust = cut(-ny);   // up on the stick is forward; screen Y grows downward
-        // };
+    // The ceiling warning is PREDICTIVE, not a fixed band. There are only 50 units
+    // between the highest peak (124) and the ceiling (174), so a static amber zone
+    // would be lit through most of normal high flight and mean nothing. Project the
+    // current climb rate forward instead: amber only when you WOULD breach within
+    // LOOKAHEAD seconds, red once move.y is actually being zeroed.
+    const LOOKAHEAD = 1.2;
+    let climbRate = 0;
+    let prevY = controls.target.y;
+    function altimeter(dt: number) {
+        const y = controls.target.y;
+        climbRate = dt > 0 ? (y - prevY) / dt : 0;
+        prevY = y;
+        elFill.style.height = tapePct(y) + '%';
+        elNum.textContent = y.toFixed(0);
+        elMtr.textContent = Math.round(y * U_TO_M) + ' m';
+        const pinned = climbRate > -0.5 && y >= CEILING - 0.6;
+        elRead.classList.toggle('crit', pinned || y > CEILING - 4);
+        elRead.classList.toggle('warn',
+            !pinned && y <= CEILING - 4 && y + climbRate * LOOKAHEAD > CEILING);
+    }
 
-        const settle = (dy: number) => {
-            const ny = Math.max(-1, Math.min(1, dy));     // one axis, so a plain clamp
-            knob.style.transform = `translateY(${ny * R}px)`;
-            // touchThrust = Math.abs(ny) < DEAD ? 0 : -ny;  // screen Y grows downward
-            // Ramp from 0 at the deadzone edge instead of jumping to 0.14 — otherwise
-            // the first millimetre of travel is worth 14% throttle and nothing below it.
-            const m = Math.abs(ny);
-            touchThrust = m < DEAD ? 0 : -Math.sign(ny) * (m - DEAD) / (1 - DEAD);
+    function buildTouchUI() {
+        (mod.querySelector('.wlift') as HTMLElement).style.display = 'flex';
+
+        // Re-point OrbitControls from the canvas onto a dedicated look layer.
+        // Controls.connect() disconnects the previous element first, so damping,
+        // minDistance/maxDistance and maxPolarAngle all carry over untouched - no
+        // need to set controls.enabled = false and re-implement orbiting by hand.
+        const look = document.createElement('div');
+        look.className = 'wlook';
+        document.body.appendChild(look);
+        controls.connect(look);
+
+        const stick = document.createElement('div');
+        stick.className = 'wstick';
+        const ring = document.createElement('div');
+        ring.className = 'wring';
+        ring.innerHTML = '<i></i>';
+        document.body.append(stick, ring);
+        const knob = ring.querySelector('i') as HTMLElement;
+
+        const R = 56;        // px of travel to full deflection
+        const DEAD = 0.14;   // thumbs are not precise
+
+        // Ramp from zero at the deadzone edge. Without this the first millimetre
+        // of travel past the deadzone is worth 14% throttle and nothing below it
+        // is worth anything - the stick feels like a switch.
+        const ramp = (v: number) => {
+            const m = Math.abs(v);
+            return m < DEAD ? 0 : Math.sign(v) * (m - DEAD) / (1 - DEAD);
+        };
+        const applyStick = (dx: number, dy: number) => {
+            const d = Math.hypot(dx, dy);
+            const k = d > 1 ? 1 / d : 1;   // clamp to the ring; do NOT rescale inside it
+            const nx = dx * k, ny = dy * k;
+            knob.style.transform = `translate(${nx * R}px, ${ny * R}px)`;
+            touchTurn = -ramp(nx);         // stick right banks right; turn is +1 for LEFT
+            touchThrust = -ramp(ny);       // screen Y grows downward
         };
 
-        // stick.addEventListener('pointerdown', (e) => {
-        //     stick.setPointerCapture(e.pointerId);
-        //     const r = stick.getBoundingClientRect();
-        //     settle((e.clientX - (r.left + r.width / 2)) / R, (e.clientY - (r.top + r.height / 2)) / R);
-        // });
-        // stick.addEventListener('pointermove', (e) => {
-        //     if (!stick.hasPointerCapture(e.pointerId)) return;
-        //     const r = stick.getBoundingClientRect();
-        //     settle((e.clientX - (r.left + r.width / 2)) / R, (e.clientY - (r.top + r.height / 2)) / R);
-        // });
-        // const release = () => { touchTurn = 0; touchThrust = 0; knob.style.transform = ''; };
-        // stick.addEventListener('pointerup', release);
-        // stick.addEventListener('pointercancel', release);
-
-        const at = (e: PointerEvent) => {
-            const r = track.getBoundingClientRect();
-            settle((e.clientY - (r.top + r.height / 2)) / R);
-        };
-        track.addEventListener('pointerdown', (e) => { track.setPointerCapture(e.pointerId); at(e); });
-        track.addEventListener('pointermove', (e) => {
-            if (track.hasPointerCapture(e.pointerId)) at(e);
+        let stickId: number | null = null;
+        let cx = 0, cy = 0;
+        stick.addEventListener('pointerdown', (e) => {
+            if (stickId !== null) return;          // one finger owns the stick
+            stickId = e.pointerId;
+            stick.setPointerCapture(e.pointerId);
+            cx = e.clientX; cy = e.clientY;        // stick materialises under the thumb
+            ring.style.left = `${cx}px`;
+            ring.style.top = `${cy}px`;
+            ring.classList.add('on');
+            applyStick(0, 0);
         });
-        const release = () => { touchThrust = 0; knob.style.transform = ''; };
-        track.addEventListener('pointerup', release);
-        track.addEventListener('pointercancel', release);
-        track.addEventListener('lostpointercapture', release);
+        stick.addEventListener('pointermove', (e) => {
+            if (e.pointerId === stickId) applyStick((e.clientX - cx) / R, (e.clientY - cy) / R);
+        });
+        const drop = (e: PointerEvent) => {
+            if (e.pointerId !== stickId) return;
+            stickId = null;
+            touchTurn = 0; touchThrust = 0;
+            ring.classList.remove('on');
+            knob.style.transform = '';
+        };
+        stick.addEventListener('pointerup', drop);
+        stick.addEventListener('pointercancel', drop);
+        stick.addEventListener('lostpointercapture', drop);
 
-        ui.querySelectorAll<HTMLButtonElement>('.alt button').forEach((b) => {
+        mod.querySelectorAll<HTMLButtonElement>('.wlift button').forEach((b) => {
             const v = Number(b.dataset.lift);
-            b.addEventListener('pointerdown', (e) => { b.setPointerCapture(e.pointerId); touchLift = v; });
-            const off = () => { touchLift = 0; };
+            b.addEventListener('pointerdown', (e) => {
+                b.setPointerCapture(e.pointerId);
+                touchLift = v;
+                b.classList.add('on');
+            });
+            const off = () => { touchLift = 0; b.classList.remove('on'); };
             b.addEventListener('pointerup', off);
             b.addEventListener('pointercancel', off);
             b.addEventListener('lostpointercapture', off);
@@ -717,7 +811,7 @@ export async function mountWorld(canvas: HTMLCanvasElement) {
         turn = 0;
         if (keys.has('KeyA') || keys.has('ArrowLeft')) turn += 1;
         if (keys.has('KeyD') || keys.has('ArrowRight')) turn -= 1;
-        // turn = Math.max(-1, Math.min(1, turn + touchTurn));
+        turn = Math.max(-1, Math.min(1, turn + touchTurn));
         // const yaw = turn * TURN_RATE * dt;
         throttle = 0;
         if (keys.has('KeyW') || keys.has('ArrowUp')) throttle += 1;
@@ -896,6 +990,7 @@ export async function mountWorld(canvas: HTMLCanvasElement) {
         controls.update();
         clampToGround();
         flyCraft(dt);
+        altimeter(dt);   // after clampToGround, so it reads the committed altitude
         renderer.render(scene, camera);
     });
 }
