@@ -1,0 +1,278 @@
+{
+ "space": "world units, same coordinate space as the individual kit pieces",
+ "note": "read off single road layout.fbx by welding the mesh and clustering on XZ footprint",
+ "scaleWarning": "everything here is the raw export scale; at 1 unit = 3 m the tallest is 567 m. Apply one uniform scale to the parent group (~0.12) rather than per piece.",
+ "roundabouts": [
+  {
+   "x": -429.8,
+   "z": 32.5,
+   "baseY": 27.3,
+   "across": 52
+  },
+  {
+   "x": -210.6,
+   "z": -37.3,
+   "baseY": 30.6,
+   "across": 52
+  },
+  {
+   "x": 8.5,
+   "z": -107.0,
+   "baseY": 14.5,
+   "across": 52
+  },
+  {
+   "x": 227.7,
+   "z": -176.8,
+   "baseY": 8.6,
+   "across": 52
+  }
+ ],
+ "roadSegments": [
+  {
+   "x": -320.2,
+   "z": -2.4,
+   "baseY": 29.1,
+   "size": [
+    178,
+    73
+   ]
+  },
+  {
+   "x": -101.0,
+   "z": -72.1,
+   "baseY": 17.9,
+   "size": [
+    178,
+    73
+   ]
+  },
+  {
+   "x": 118.1,
+   "z": -141.9,
+   "baseY": 9.9,
+   "size": [
+    178,
+    73
+   ]
+  }
+ ],
+ "buildings": [
+  {
+   "x": -383.37,
+   "z": -20.93,
+   "baseY": 25.45,
+   "footprint": [
+    60.4,
+    46.4
+   ],
+   "height": 76.8,
+   "suggest": "bulding-2",
+   "fitErr": 13.0
+  },
+  {
+   "x": -360.94,
+   "z": 49.22,
+   "baseY": 25.45,
+   "footprint": [
+    60.4,
+    46.4
+   ],
+   "height": 76.8,
+   "suggest": "bulding-2",
+   "fitErr": 13.0
+  },
+  {
+   "x": -325.89,
+   "z": -39.39,
+   "baseY": 29.93,
+   "footprint": [
+    56.5,
+    48.3
+   ],
+   "height": 110.5,
+   "suggest": "bulding-2",
+   "fitErr": 12.4
+  },
+  {
+   "x": -303.46,
+   "z": 31.09,
+   "baseY": 29.93,
+   "footprint": [
+    56.5,
+    48.3
+   ],
+   "height": 110.5,
+   "suggest": "bulding-2",
+   "fitErr": 12.4
+  },
+  {
+   "x": -284.96,
+   "z": -49.83,
+   "baseY": 31.15,
+   "footprint": [
+    55.9,
+    36.8
+   ],
+   "height": 69.3,
+   "suggest": "house2",
+   "fitErr": 16.8
+  },
+  {
+   "x": -258.07,
+   "z": 11.73,
+   "baseY": 31.15,
+   "footprint": [
+    41.3,
+    36.8
+   ],
+   "height": 26.3,
+   "suggest": "house1",
+   "fitErr": 7.0
+  },
+  {
+   "x": -168.8,
+   "z": -105.08,
+   "baseY": 21.94,
+   "footprint": [
+    72.6,
+    68.7
+   ],
+   "height": 178.7,
+   "suggest": "bulding-1",
+   "fitErr": 29.1
+  },
+  {
+   "x": -137.29,
+   "z": -6.11,
+   "baseY": 21.94,
+   "footprint": [
+    72.6,
+    68.7
+   ],
+   "height": 178.8,
+   "suggest": "bulding-1",
+   "fitErr": 29.1
+  },
+  {
+   "x": -107.98,
+   "z": -124.37,
+   "baseY": 16.12,
+   "footprint": [
+    72.5,
+    68.6
+   ],
+   "height": 189.1,
+   "suggest": "bulding-1",
+   "fitErr": 29.3
+  },
+  {
+   "x": -76.52,
+   "z": -25.53,
+   "baseY": 17.48,
+   "footprint": [
+    72.5,
+    68.6
+   ],
+   "height": 187.9,
+   "suggest": "bulding-1",
+   "fitErr": 29.3
+  },
+  {
+   "x": -51.65,
+   "z": -120.81,
+   "baseY": 14.57,
+   "footprint": [
+    40.7,
+    35.0
+   ],
+   "height": 26.9,
+   "suggest": "house1",
+   "fitErr": 9.4
+  },
+  {
+   "x": -32.61,
+   "z": -60.99,
+   "baseY": 14.57,
+   "footprint": [
+    40.7,
+    35.0
+   ],
+   "height": 26.9,
+   "suggest": "house1",
+   "fitErr": 9.4
+  },
+  {
+   "x": 49.51,
+   "z": -157.98,
+   "baseY": 6.75,
+   "footprint": [
+    51.6,
+    45.2
+   ],
+   "height": 92.4,
+   "suggest": "bulding-2",
+   "fitErr": 20.4
+  },
+  {
+   "x": 71.43,
+   "z": -89.13,
+   "baseY": 6.71,
+   "footprint": [
+    51.6,
+    45.2
+   ],
+   "height": 92.5,
+   "suggest": "bulding-2",
+   "fitErr": 20.4
+  },
+  {
+   "x": 104.23,
+   "z": -175.99,
+   "baseY": 6.68,
+   "footprint": [
+    59.7,
+    46.0
+   ],
+   "height": 55.7,
+   "suggest": "house2",
+   "fitErr": 10.2
+  },
+  {
+   "x": 126.59,
+   "z": -106.1,
+   "baseY": 6.74,
+   "footprint": [
+    59.7,
+    46.0
+   ],
+   "height": 55.4,
+   "suggest": "house2",
+   "fitErr": 10.2
+  },
+  {
+   "x": 159.04,
+   "z": -194.22,
+   "baseY": 6.34,
+   "footprint": [
+    52.4,
+    47.8
+   ],
+   "height": 90.2,
+   "suggest": "bulding-2",
+   "fitErr": 17.0
+  },
+  {
+   "x": 181.75,
+   "z": -122.88,
+   "baseY": 6.28,
+   "footprint": [
+    52.4,
+    47.8
+   ],
+   "height": 90.2,
+   "suggest": "bulding-2",
+   "fitErr": 17.0
+  }
+ ]
+}

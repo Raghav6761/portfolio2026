@@ -3,6 +3,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 // import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { buildCity } from './city';
 // import { Sky } from 'three/addons/objects/Sky.js';
 // import { makeGrassTuft, makeGrassMaterial } from './grassTuft';
 
@@ -1017,6 +1018,17 @@ export async function mountWorld(canvas: HTMLCanvasElement) {
         if (camFloor !== null && camera.position.y < camFloor + CAM_CLEARANCE) {
             camera.position.y = camFloor + CAM_CLEARANCE;
         }
+    }
+
+    // -- Mandeep's city ---------------------------------------------------
+    // Built here, not earlier, because it needs groundAt() to find somewhere
+    // flat to stand on. Wrapped so a bad asset can't take the whole world down
+    // -- the flight sim is the page; the city is scenery on it.
+    try {
+        const { city } = await buildCity({ loader, groundAt, scale: 0.12 });
+        scene.add(city);
+    } catch (err) {
+        console.error('[city] failed to build, carrying on without it', err);
     }
 
     // Rotar movement
