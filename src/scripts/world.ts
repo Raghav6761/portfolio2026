@@ -598,6 +598,8 @@ export async function mountWorld(canvas: HTMLCanvasElement) {
     let strafeBank = 0;     // cosmetic lean into a sideways slide (craftTilt only)
     let touchThrust = 0;    // -1..+1 analog, left stick Y
     let touchLift = 0;      // -1, 0 or +1, climb/descend buttons
+    let touchBoost = false; // boost is a TOGGLE: the thumb that taps it is the
+                            // same one holding climb/descend, so it can't be a hold
 
     // -- touch + HUD -----------------------------------------------------
     // ONE OWNER PER SCREEN REGION. The overlay layers are SIBLINGS of the canvas,
@@ -615,6 +617,9 @@ export async function mountWorld(canvas: HTMLCanvasElement) {
     const PEAK_Y = terrainBox.max.y;        // ~124.01
     const TAPE_TOP = CEILING + 16;          // headroom so the lid is drawn, not discovered
     const U_TO_M = 3;                       // 1 unit ~ 3 m (CRAFT_LENGTH 10 on a ~30 m Chinook)
+    // Sideways should not match forward. A helicopter in a sideways slide is
+    // slower and less comfortable than one flying where its nose points.
+    const STRAFE_SCALE = 0.6;               // 24 u/s sideways against 40 forward
 
     const hudCss = document.createElement('style');
     hudCss.textContent = `
@@ -644,6 +649,7 @@ export async function mountWorld(canvas: HTMLCanvasElement) {
             backdrop-filter:blur(5px);cursor:pointer;touch-action:none;
             -webkit-tap-highlight-color:transparent;transition:background .1s,color .1s}
         .wlift button.on{background:#D7A24A;color:#14110D;border-color:#D7A24A}
+        .wlift button.boost{font-size:13px;letter-spacing:.01em}
         .walt{width:54px;display:flex;flex-direction:column;gap:5px}
         .wtape{position:relative;flex:1;min-height:92px;border-radius:7px;overflow:hidden;
             background:rgba(20,17,13,.52);border:1px solid #322A1F;backdrop-filter:blur(5px)}
@@ -674,15 +680,17 @@ export async function mountWorld(canvas: HTMLCanvasElement) {
     mod.className = 'wmod';
     mod.innerHTML = `<div class="wlift">
             <button type="button" data-lift="1" aria-label="Climb">&#9650;</button>
+            <button type="button" class="boost" data-boost aria-pressed="false"
+                    aria-label="Boost">3&#215;</button>
             <button type="button" data-lift="-1" aria-label="Descend">&#9660;</button>
         </div>
         <div class="walt">
             <div class="wtape">
                 <div class="wband"></div><div class="wfill"></div>
-                <div class="wmark ceil"><span>CEIL ${Math.round(CEILING)}</span></div>
-                <div class="wmark peak"><span>PEAK ${Math.round(PEAK_Y)}</span></div>
+                <div class="wmark ceil"><span>CEIL ${Math.round(CEILING * U_TO_M)}</span></div>
+                <div class="wmark peak"><span>PEAK ${Math.round(PEAK_Y * U_TO_M)}</span></div>
             </div>
-            <div class="wread"><b>0</b><em>0 m</em></div>
+            <div class="wread"><b>0</b><em>m</em></div>
         </div>`;
     document.body.appendChild(mod);
 
@@ -690,7 +698,6 @@ export async function mountWorld(canvas: HTMLCanvasElement) {
     const elFill = mod.querySelector('.wfill') as HTMLElement;
     const elRead = mod.querySelector('.wread') as HTMLElement;
     const elNum = mod.querySelector('.wread b') as HTMLElement;
-    const elMtr = mod.querySelector('.wread em') as HTMLElement;
     (mod.querySelector('.wband') as HTMLElement).style.bottom = tapePct(CEILING) + '%';
     (mod.querySelector('.wmark.ceil') as HTMLElement).style.bottom = tapePct(CEILING) + '%';
     (mod.querySelector('.wmark.peak') as HTMLElement).style.bottom = tapePct(PEAK_Y) + '%';
@@ -708,8 +715,8 @@ export async function mountWorld(canvas: HTMLCanvasElement) {
         climbRate = dt > 0 ? (y - prevY) / dt : 0;
         prevY = y;
         elFill.style.height = tapePct(y) + '%';
-        elNum.textContent = y.toFixed(0);
-        elMtr.textContent = Math.round(y * U_TO_M) + ' m';
+        // metres only -- world units are an implementation detail, not a reading
+        elNum.textContent = String(Math.round(y * U_TO_M));
         const pinned = climbRate > -0.5 && y >= CEILING - 0.6;
         elRead.classList.toggle('crit', pinned || y > CEILING - 4);
         elRead.classList.toggle('warn',
@@ -781,7 +788,7 @@ export async function mountWorld(canvas: HTMLCanvasElement) {
         stick.addEventListener('pointercancel', drop);
         stick.addEventListener('lostpointercapture', drop);
 
-        mod.querySelectorAll<HTMLButtonElement>('.wlift button').forEach((b) => {
+        mod.querySelectorAll<HTMLButtonElement>('.wlift button[data-lift]').forEach((b) => {
             const v = Number(b.dataset.lift);
             b.addEventListener('pointerdown', (e) => {
                 b.setPointerCapture(e.pointerId);
@@ -792,6 +799,13 @@ export async function mountWorld(canvas: HTMLCanvasElement) {
             b.addEventListener('pointerup', off);
             b.addEventListener('pointercancel', off);
             b.addEventListener('lostpointercapture', off);
+        });
+
+        const boostBtn = mod.querySelector('.wlift button[data-boost]') as HTMLButtonElement;
+        boostBtn.addEventListener('pointerdown', () => {
+            touchBoost = !touchBoost;
+            boostBtn.classList.toggle('on', touchBoost);
+            boostBtn.setAttribute('aria-pressed', String(touchBoost));
         });
 
         // OrbitControls attaches its pointermove listener to ownerDocument, NOT to
@@ -881,7 +895,7 @@ export async function mountWorld(canvas: HTMLCanvasElement) {
         // if (throttle > 0) move.add(fwd);
         // if (throttle < 0) move.sub(fwd);
         move.addScaledVector(fwd, throttle);
-        move.addScaledVector(rgt, touchStrafe);   // sideways, no heading change
+        move.addScaledVector(rgt, touchStrafe * STRAFE_SCALE);   // sideways, no heading change
         // if (keys.has('KeyE')) move.add(rgt);          // strafe, still handy
         // if (keys.has('KeyQ')) move.sub(rgt);
         if (keys.has('KeyE')) move.y += 1;
@@ -892,7 +906,8 @@ export async function mountWorld(canvas: HTMLCanvasElement) {
 
         if (move.lengthSq() === 0) return;
         // move.normalize().multiplyScalar((keys.has('ShiftLeft') ? 120 : 40) * dt);
-        move.clampLength(0, 1).multiplyScalar((keys.has('ShiftLeft') ? 120 : 40) * dt);
+        const fast = keys.has('ShiftLeft') || touchBoost;   // Shift on a keyboard, 3x on touch
+        move.clampLength(0, 1).multiplyScalar((fast ? 120 : 40) * dt);
 
         // Test where the step would LAND before committing it, and drop only the
         // offending axis — so you slide along the boundary instead of stopping dead.
