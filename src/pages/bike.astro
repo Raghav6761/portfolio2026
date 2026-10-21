@@ -7,42 +7,62 @@ import Layout from "../layouts/Layout.astro";
 
     <div class="tag">
         <h1>Meteor 350, scanned</h1>
-        <p>Phone video → RealityScan → three.js. 800k faces, 4K texture, real-world scale.</p>
+        <p>Phone video → RealityScan mesh + Gaussian splat → three.js. Real-world scale. Click the front tyre to swap it.</p>
     </div>
 
-    <p id="loading" class="loading">Loading scan <span id="pct">0%</span></p>
+    <p id="loading" class="loading">Loading <span id="what">splat</span> <span id="pct">0%</span></p>
+
+    <div id="part" class="part" hidden>
+        <button id="partClose" class="x" aria-label="Close">×</button>
+        <h2>Front tyre</h2>
+        <p>19" front · splat hidden in this region, part placed on the measured axle</p>
+        <button class="opt" data-tyre="scan" aria-pressed="true"><b>As fitted</b><small>from the scan</small></button>
+        <button class="opt" data-tyre="block" aria-pressed="false"><b>Block tread 100/90‑19</b><small>dual‑purpose · generated GLB</small></button>
+    </div>
 
     <div class="bar">
-        <button id="bTex" aria-pressed="true">Texture</button>
+        <button id="bSplat" aria-pressed="true">Splat</button>
+        <button id="bMesh" aria-pressed="false">Mesh</button>
         <button id="bClay" aria-pressed="false">Clay</button>
         <button id="bSpin" aria-pressed="false">Turntable</button>
         <button data-view="tyre">Front tyre</button>
         <button data-view="lamp">Headlight</button>
+        <button data-view="tank">Tank</button>
         <button data-view="home">Reset view</button>
     </div>
 </Layout>
 
 <script>
-    import { mountBike } from "../scripts/bike";
-    const canvas = document.getElementById("bike") as HTMLCanvasElement;
-    const pct = document.getElementById("pct")!;
-    const loading = document.getElementById("loading")!;
-    const bike = mountBike(canvas, (p) => (pct.textContent = p + "%"));
+    import { mountBike, type TyreOption } from "../scripts/bike";
+    const $ = (id: string) => document.getElementById(id)!;
+    const canvas = $("bike") as HTMLCanvasElement;
+    const pct = $("pct"), what = $("what"), loading = $("loading");
+    const bike = mountBike(canvas, (label, p) => { what.textContent = label; pct.textContent = p + "%"; });
     bike.ready
         .then(() => (loading.hidden = true))
         .catch(() => (loading.textContent = "The scan didn't load. Refresh to try again."));
 
-    const bTex = document.getElementById("bTex")!, bClay = document.getElementById("bClay")!, bSpin = document.getElementById("bSpin")!;
-    const setMode = (clay: boolean) => {
-        bike.setClay(clay);
-        bTex.setAttribute("aria-pressed", String(!clay));
-        bClay.setAttribute("aria-pressed", String(clay));
-    };
-    bTex.addEventListener("click", () => setMode(false));
-    bClay.addEventListener("click", () => setMode(true));
-    bSpin.addEventListener("click", () => bSpin.setAttribute("aria-pressed", String(bike.toggleSpin())));
+    const press = (el: HTMLElement, on: boolean) => el.setAttribute("aria-pressed", String(on));
+    const bSplat = $("bSplat"), bMesh = $("bMesh"), bClay = $("bClay"), bSpin = $("bSpin");
+    let splatOn = true, meshOn = false, clayOn = false;
+    bSplat.addEventListener("click", () => { splatOn = !splatOn; bike.setSplat(splatOn); press(bSplat, splatOn); });
+    bMesh.addEventListener("click", () => { meshOn = !meshOn; bike.setMesh(meshOn); press(bMesh, meshOn); });
+    bClay.addEventListener("click", () => { clayOn = !clayOn; bike.setClay(clayOn); press(bClay, clayOn); });
+    bSpin.addEventListener("click", () => press(bSpin, bike.toggleSpin()));
     document.querySelectorAll<HTMLButtonElement>("[data-view]").forEach((b) =>
-        b.addEventListener("click", () => bike.go(b.dataset.view as "home" | "tyre" | "lamp")),
+        b.addEventListener("click", () => bike.go(b.dataset.view as "home" | "tyre" | "lamp" | "tank")),
+    );
+
+    // Part panel
+    const panel = $("part");
+    bike.onPick((part) => { panel.hidden = part !== "tyre"; });
+    $("partClose").addEventListener("click", () => { panel.hidden = true; bike.deselect(); });
+    const opts = document.querySelectorAll<HTMLButtonElement>("[data-tyre]");
+    opts.forEach((b) =>
+        b.addEventListener("click", async () => {
+            opts.forEach((o) => press(o, o === b));
+            await bike.fitTyre(b.dataset.tyre as TyreOption);
+        }),
     );
 </script>
 
@@ -67,4 +87,18 @@ import Layout from "../layouts/Layout.astro";
         border: 1px solid var(--line); border-radius: 999px; padding: 8px 14px; cursor: pointer; }
     .bar button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
     .bar button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+    .part {
+        position: fixed; right: 16px; bottom: 72px; width: min(300px, calc(100vw - 32px));
+        background: color-mix(in srgb, var(--surface) 92%, transparent);
+        border: 1px solid var(--accent); border-radius: 8px; padding: 12px 14px; color: var(--text);
+    }
+    .part[hidden] { display: none; }
+    .part h2 { margin: 0 0 2px; font: 600 16px "Fraunces", serif; }
+    .part p { margin: 0 0 10px; font: 400 12px "Hanken Grotesk", sans-serif; color: var(--muted); }
+    .part .opt { display: block; width: 100%; text-align: left; font: 500 13px "Hanken Grotesk", sans-serif; color: var(--text);
+        background: transparent; border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; margin-top: 6px; cursor: pointer; }
+    .part .opt[aria-pressed="true"] { border-color: var(--accent); }
+    .part .opt small { display: block; font: 400 11px "JetBrains Mono", monospace; color: var(--muted); }
+    .part .x { position: absolute; top: 6px; right: 10px; background: none; border: 0; color: var(--muted); font-size: 18px; cursor: pointer; }
 </style>
