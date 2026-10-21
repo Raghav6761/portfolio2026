@@ -1025,7 +1025,7 @@ export async function mountWorld(canvas: HTMLCanvasElement) {
     // flat to stand on. Wrapped so a bad asset can't take the whole world down
     // -- the flight sim is the page; the city is scenery on it.
     try {
-        const { city } = await buildCity({ loader, groundAt, scale: 0.12 });
+        const { city } = await buildCity({ loader, groundAt, scale: 0.2 });
         scene.add(city);
     } catch (err) {
         console.error('[city] failed to build, carrying on without it', err);

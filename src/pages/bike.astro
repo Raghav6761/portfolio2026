@@ -1,0 +1,70 @@
+---
+import Layout from "../layouts/Layout.astro";
+---
+
+<Layout title="Bike Scan - Raghav Watts">
+    <canvas id="bike"></canvas>
+
+    <div class="tag">
+        <h1>Meteor 350, scanned</h1>
+        <p>Phone video → RealityScan → three.js. 800k faces, 4K texture, real-world scale.</p>
+    </div>
+
+    <p id="loading" class="loading">Loading scan <span id="pct">0%</span></p>
+
+    <div class="bar">
+        <button id="bTex" aria-pressed="true">Texture</button>
+        <button id="bClay" aria-pressed="false">Clay</button>
+        <button id="bSpin" aria-pressed="false">Turntable</button>
+        <button data-view="tyre">Front tyre</button>
+        <button data-view="lamp">Headlight</button>
+        <button data-view="home">Reset view</button>
+    </div>
+</Layout>
+
+<script>
+    import { mountBike } from "../scripts/bike";
+    const canvas = document.getElementById("bike") as HTMLCanvasElement;
+    const pct = document.getElementById("pct")!;
+    const loading = document.getElementById("loading")!;
+    const bike = mountBike(canvas, (p) => (pct.textContent = p + "%"));
+    bike.ready
+        .then(() => (loading.hidden = true))
+        .catch(() => (loading.textContent = "The scan didn't load. Refresh to try again."));
+
+    const bTex = document.getElementById("bTex")!, bClay = document.getElementById("bClay")!, bSpin = document.getElementById("bSpin")!;
+    const setMode = (clay: boolean) => {
+        bike.setClay(clay);
+        bTex.setAttribute("aria-pressed", String(!clay));
+        bClay.setAttribute("aria-pressed", String(clay));
+    };
+    bTex.addEventListener("click", () => setMode(false));
+    bClay.addEventListener("click", () => setMode(true));
+    bSpin.addEventListener("click", () => bSpin.setAttribute("aria-pressed", String(bike.toggleSpin())));
+    document.querySelectorAll<HTMLButtonElement>("[data-view]").forEach((b) =>
+        b.addEventListener("click", () => bike.go(b.dataset.view as "home" | "tyre" | "lamp")),
+    );
+</script>
+
+<style is:global>
+    html, body { height: 100%; overflow: hidden; }
+</style>
+
+<style>
+    canvas { display: block; width: 100vw; height: 100dvh; touch-action: none; }
+    .tag {
+        position: fixed; top: 16px; left: 16px; max-width: min(340px, calc(100vw - 32px));
+        background: color-mix(in srgb, var(--surface) 88%, transparent);
+        border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px; color: var(--text);
+    }
+    .tag h1 { margin: 0; font: 600 20px "Fraunces", serif; }
+    .tag p { margin: 4px 0 0; font: 400 13px "Hanken Grotesk", sans-serif; color: var(--muted); }
+    .loading { position: fixed; inset: 0; display: grid; place-items: center; margin: 0;
+        font: 400 13px "JetBrains Mono", monospace; color: var(--muted); pointer-events: none; }
+    .loading[hidden] { display: none; }
+    .bar { position: fixed; left: 0; right: 0; bottom: 16px; display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; padding-inline: 16px; }
+    .bar button { font: 500 13px "Hanken Grotesk", sans-serif; color: var(--text); background: var(--surface);
+        border: 1px solid var(--line); border-radius: 999px; padding: 8px 14px; cursor: pointer; }
+    .bar button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+    .bar button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
