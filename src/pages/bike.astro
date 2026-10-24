@@ -7,17 +7,22 @@ import Layout from "../layouts/Layout.astro";
 
     <div class="tag">
         <h1>Meteor 350, scanned</h1>
-        <p>Phone video → RealityScan mesh + Gaussian splat → three.js. Real-world scale. Click the front tyre to swap it.</p>
+        <p>Phone video → RealityScan mesh + Gaussian splat → three.js. Real-world scale. Click either tyre to swap it.</p>
     </div>
 
     <p id="loading" class="loading">Loading <span id="what">splat</span> <span id="pct">0%</span></p>
 
     <div id="part" class="part" hidden>
         <button id="partClose" class="x" aria-label="Close">×</button>
-        <h2>Front tyre</h2>
-        <p>19" front · splat hidden in this region, part placed on the measured axle</p>
-        <button class="opt" data-tyre="scan" aria-pressed="true"><b>As fitted</b><small>from the scan</small></button>
-        <button class="opt" data-tyre="block" aria-pressed="false"><b>Block tread 100/90‑19</b><small>dual‑purpose · generated GLB</small></button>
+        <h2 id="partTitle"></h2>
+        <p id="partSub"></p>
+        <div id="partOpts"></div>
+        <div class="adj" id="partAdj">
+            <label>along axle <input type="range" id="adjZ" min="-40" max="40" step="1" value="0" /><span id="adjZv">0 mm</span></label>
+            <label>fore / aft <input type="range" id="adjX" min="-40" max="40" step="1" value="0" /><span id="adjXv">0 mm</span></label>
+            <label>up / down <input type="range" id="adjY" min="-40" max="40" step="1" value="0" /><span id="adjYv">0 mm</span></label>
+            <button id="adjReset">reset</button>
+        </div>
     </div>
 
     <div class="bar">
@@ -26,6 +31,7 @@ import Layout from "../layouts/Layout.astro";
         <button id="bClay" aria-pressed="false">Clay</button>
         <button id="bSpin" aria-pressed="false">Turntable</button>
         <button data-view="tyre">Front tyre</button>
+        <button data-view="rear">Rear tyre</button>
         <button data-view="lamp">Headlight</button>
         <button data-view="tank">Tank</button>
         <button data-view="home">Reset view</button>
@@ -33,7 +39,7 @@ import Layout from "../layouts/Layout.astro";
 </Layout>
 
 <script>
-    import { mountBike, type TyreOption } from "../scripts/bike";
+    import { mountBike, type WheelKey } from "../scripts/bike";
     const $ = (id: string) => document.getElementById(id)!;
     const canvas = $("bike") as HTMLCanvasElement;
     const pct = $("pct"), what = $("what"), loading = $("loading");
@@ -50,20 +56,48 @@ import Layout from "../layouts/Layout.astro";
     bClay.addEventListener("click", () => { clayOn = !clayOn; bike.setClay(clayOn); press(bClay, clayOn); });
     bSpin.addEventListener("click", () => press(bSpin, bike.toggleSpin()));
     document.querySelectorAll<HTMLButtonElement>("[data-view]").forEach((b) =>
-        b.addEventListener("click", () => bike.go(b.dataset.view as "home" | "tyre" | "lamp" | "tank")),
+        b.addEventListener("click", () => bike.go(b.dataset.view as "home" | "tyre" | "rear" | "lamp" | "tank")),
     );
 
-    // Part panel
-    const panel = $("part");
-    bike.onPick((part) => { panel.hidden = part !== "tyre"; });
-    $("partClose").addEventListener("click", () => { panel.hidden = true; bike.deselect(); });
-    const opts = document.querySelectorAll<HTMLButtonElement>("[data-tyre]");
-    opts.forEach((b) =>
-        b.addEventListener("click", async () => {
-            opts.forEach((o) => press(o, o === b));
-            await bike.fitTyre(b.dataset.tyre as TyreOption);
-        }),
-    );
+    // ---- part panel ----
+    const panel = $("part"), adjBox = $("partAdj");
+    let selected: WheelKey | null = null;
+
+    const syncAdj = () => {
+        if (!selected) return;
+        const a = bike.adjustment(selected);
+        for (const [ax, v] of [["X", a.x], ["Y", a.y], ["Z", a.z]] as const) {
+            const mm = Math.round(v * 1000);
+            ($("adj" + ax) as HTMLInputElement).value = String(mm);
+            $("adj" + ax + "v").textContent = mm + " mm";
+        }
+        adjBox.style.display = bike.fittedOn(selected) === "scan" ? "none" : "grid";
+    };
+    const render = () => {
+        bike.select(selected);
+        if (!selected) { panel.hidden = true; return; }
+        const W = bike.wheels[selected];
+        $("partTitle").textContent = W.title;
+        $("partSub").textContent = W.sub;
+        const opts: [string, string, string][] = [["scan", "As fitted", "from the scan"], ...Object.entries(W.parts).map(([k, p]) => [k, p.label, p.small] as [string, string, string])];
+        $("partOpts").innerHTML = opts.map(([k, l, sm]) =>
+            `<button class="opt" data-pk="${k}" aria-pressed="${bike.fittedOn(selected!) === k}"><b>${l}</b><small>${sm}</small></button>`).join("");
+        $("partOpts").querySelectorAll<HTMLButtonElement>("button").forEach((b) =>
+            b.addEventListener("click", async () => { await bike.fit(selected!, b.dataset.pk!); render(); }));
+        syncAdj();
+        panel.hidden = false;
+    };
+    bike.onPick((wk) => { selected = wk; render(); });
+    $("partClose").addEventListener("click", () => { selected = null; render(); });
+    for (const ax of ["X", "Y", "Z"] as const) {
+        ($("adj" + ax) as HTMLInputElement).addEventListener("input", (e) => {
+            if (!selected) return;
+            const mm = +(e.target as HTMLInputElement).value;
+            bike.nudge(selected, { [ax.toLowerCase()]: mm });
+            $("adj" + ax + "v").textContent = mm + " mm";
+        });
+    }
+    $("adjReset").addEventListener("click", () => { if (!selected) return; bike.nudge(selected, { x: 0, y: 0, z: 0 }); syncAdj(); });
 </script>
 
 <style is:global>
@@ -100,5 +134,11 @@ import Layout from "../layouts/Layout.astro";
         background: transparent; border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; margin-top: 6px; cursor: pointer; }
     .part .opt[aria-pressed="true"] { border-color: var(--accent); }
     .part .opt small { display: block; font: 400 11px "JetBrains Mono", monospace; color: var(--muted); }
+    .part .adj { margin-top: 10px; border-top: 1px solid var(--line); padding-top: 8px; display: grid; gap: 4px;
+        font: 400 11px "JetBrains Mono", monospace; color: var(--muted); }
+    .part .adj label { display: grid; grid-template-columns: 70px 1fr 48px; align-items: center; gap: 8px; }
+    .part .adj input { width: 100%; accent-color: var(--accent); }
+    .part .adj button { justify-self: end; font: 500 11px "Hanken Grotesk", sans-serif; color: var(--muted); background: none;
+        border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px; cursor: pointer; }
     .part .x { position: absolute; top: 6px; right: 10px; background: none; border: 0; color: var(--muted); font-size: 18px; cursor: pointer; }
 </style>

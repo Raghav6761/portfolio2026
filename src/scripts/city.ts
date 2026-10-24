@@ -1,11 +1,14 @@
 import * as THREE from 'three';
 import type { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
-type Slot = { x: number; z: number; baseY: number; footprint: [number, number]; height: number; suggest: string };
+type Slot = { along: number; across: number; footprint: [number, number]; height: number; suggest: string; gap: number | null };
 type Slots = {
+    axisRad: number;
+    origin: { x: number; z: number };
+    spacing: number;
     buildings: Slot[];
-    roundabouts: { x: number; z: number; baseY: number; across: number }[];
-    roadSegments: { x: number; z: number; baseY: number; size: [number, number] }[];
+    roundabouts: { along: number; across: number }[];
+    roadSegments: { along: number; across: number }[];
 };
 
 export type CityOpts = {
@@ -46,12 +49,35 @@ export async function buildCity(o: CityOpts) {
     const city = new THREE.Group();
     city.name = 'city';
 
-    const xs = slots.buildings.map((b) => b.x);
-    const zs = slots.buildings.map((b) => b.z);
-    const ox = (Math.min(...xs) + Math.max(...xs)) / 2;
-    const oz = (Math.min(...zs) + Math.max(...zs)) / 2;
+    // The boulevard's own frame. Everything in the layout is regular in THIS basis
+    // and looks like noise in XZ: roundabouts land at along = 0/230/460/690 with
+    // across within 0.02 of the centreline, roads at the exact midpoints, and the
+    // buildings in mirrored pairs.
+    const AXIS = slots.axisRad;
+    const U = new THREE.Vector2(Math.sin(AXIS), Math.cos(AXIS));  // along
+    const P = new THREE.Vector2(Math.cos(AXIS), -Math.sin(AXIS));  // across
+    const x0 = slots.origin.x, z0 = slots.origin.z;                              // along = across = 0
 
-    const place = (piece: string, x: number, z: number, tag: string) => {
+    const toAxis = (x: number, z: number) => {
+        const dx = x - x0, dz = z - z0;
+        return { along: dx * U.x + dz * U.y, across: dx * P.x + dz * P.y };
+    };
+    const toWorld = (along: number, across: number) => new THREE.Vector2(
+        x0 + along * U.x + across * P.x,
+        z0 + along * U.y + across * P.y,
+    );
+
+    // Centre the group on the middle of the boulevard rather than the mean of the
+    // building positions -- the city's middle is a point on the road, not on a lawn.
+    const mid = slots.spacing * (slots.roundabouts.length - 1) / 2;
+    const centre = toWorld(mid, 0);
+    const ox = centre.x, oz = centre.y;
+
+    if (!Number.isFinite(ox) || !Number.isFinite(oz)) {
+        throw new Error(`[city] bad frame: axis=${AXIS} origin=${x0},${z0}`);
+    }
+
+    const place = (piece: string, along: number, across: number, tag: string) => {
         const proto = kit.get(piece);
         if (!proto) { console.warn('[city] no kit piece named', piece); return; }
         const inst = proto.clone();
@@ -59,16 +85,17 @@ export async function buildCity(o: CityOpts) {
         // layout's orientation: PCA on road.glb's footprint gives a baked
         // direction of 107.6 deg against a boulevard axis of 107.66 deg.
         // Rotating them by the axis double-rotates and the roads disappear.
-        inst.position.set(x - ox, 0, z - oz);
+        const w = toWorld(along, across);
+        inst.position.set(w.x - ox, 0, w.y - oz);
         inst.name = tag;
         city.add(inst);
         return inst;
     };
 
     // roads first, so a building that overhangs sits on top of the kerb rather than under it
-    slots.roadSegments.forEach((s, i) => place('road', s.x, s.z, `road_${i}`));
-    slots.roundabouts.forEach((s, i) => place('roundabout', s.x, s.z, `roundabout_${i}`));
-    slots.buildings.forEach((b, i) => place(b.suggest, b.x, b.z, `bld_${i}_${b.suggest}`));
+    slots.roadSegments.forEach((s, i) => place('road', s.along, s.across, `road_${i}`));
+    slots.roundabouts.forEach((s, i) => place('roundabout', s.along, s.across, `roundabout_${i}`));
+    slots.buildings.forEach((b, i) => place(b.suggest, b.along, b.across, `bld_${i}_${b.suggest}`));
 
     city.scale.setScalar(o.scale ?? 0.12);
     city.updateMatrixWorld(true);
@@ -114,6 +141,8 @@ export async function buildCity(o: CityOpts) {
     console.info('[city] %d pieces at (%.0f, %.0f, %.0f), %.1f x %.1f units, ground spread %.1f',
         city.children.length, bx, by, bz, hx * 2, hz * 2, bestSpread);
 
-    return { city, centre: new THREE.Vector3(bx, by, bz), spread: bestSpread,
-             size: new THREE.Vector2(hx * 2, hz * 2) };
+    return {
+        city, centre: new THREE.Vector3(bx, by, bz), spread: bestSpread,
+        size: new THREE.Vector2(hx * 2, hz * 2)
+    };
 }
