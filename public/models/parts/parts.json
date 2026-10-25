@@ -1,0 +1,210 @@
+{
+ "parts": [
+  "front tyre",
+  "rear tyre",
+  "front wheel",
+  "rear wheel",
+  "front mudguard",
+  "rear mudguard",
+  "fork",
+  "headlamp",
+  "indicators",
+  "handlebar",
+  "mirrors",
+  "instrument",
+  "fuel tank",
+  "seat",
+  "side panels",
+  "engine",
+  "exhaust",
+  "shock absorbers",
+  "tail lamp",
+  "number plate",
+  "centre stand",
+  "phone mount",
+  "unlabelled",
+  "background"
+ ],
+ "colors": [
+  [
+   230,
+   25,
+   75
+  ],
+  [
+   60,
+   180,
+   75
+  ],
+  [
+   255,
+   225,
+   25
+  ],
+  [
+   0,
+   130,
+   200
+  ],
+  [
+   245,
+   130,
+   48
+  ],
+  [
+   145,
+   30,
+   180
+  ],
+  [
+   70,
+   240,
+   240
+  ],
+  [
+   240,
+   50,
+   230
+  ],
+  [
+   210,
+   245,
+   60
+  ],
+  [
+   250,
+   190,
+   212
+  ],
+  [
+   0,
+   128,
+   128
+  ],
+  [
+   220,
+   190,
+   255
+  ],
+  [
+   170,
+   110,
+   40
+  ],
+  [
+   255,
+   250,
+   200
+  ],
+  [
+   128,
+   0,
+   0
+  ],
+  [
+   170,
+   255,
+   195
+  ],
+  [
+   128,
+   128,
+   0
+  ],
+  [
+   255,
+   215,
+   180
+  ],
+  [
+   0,
+   0,
+   128
+  ],
+  [
+   255,
+   255,
+   255
+  ],
+  [
+   100,
+   60,
+   20
+  ],
+  [
+   255,
+   105,
+   180
+  ],
+  [
+   120,
+   120,
+   120
+  ],
+  [
+   40,
+   40,
+   40
+  ]
+ ],
+ "sizes": {
+  "front tyre": 71724,
+  "rear tyre": 21808,
+  "front wheel": 64101,
+  "rear wheel": 29885,
+  "front mudguard": 11972,
+  "rear mudguard": 12569,
+  "fork": 33166,
+  "headlamp": 34923,
+  "indicators": 14284,
+  "handlebar": 27370,
+  "mirrors": 9314,
+  "instrument": 8477,
+  "fuel tank": 28933,
+  "seat": 44875,
+  "side panels": 25028,
+  "engine": 82280,
+  "exhaust": 28548,
+  "shock absorbers": 14861,
+  "tail lamp": 6412,
+  "number plate": 26667,
+  "centre stand": 27,
+  "phone mount": 13943,
+  "unlabelled": 335983,
+  "background": 33522
+ },
+ "wheels": {
+  "front": {
+   "c": [
+    0.7286,
+    0.3144,
+    -0.0028
+   ],
+   "n": [
+    -0.0304,
+    0.0221,
+    -0.9993
+   ],
+   "r_in": 0.2508,
+   "r_out": 0.342,
+   "half_w": 0.045
+  },
+  "rear": {
+   "c": [
+    -0.7036,
+    0.3046,
+    -0.0439
+   ],
+   "n": [
+    0.085,
+    0.0211,
+    -0.9962
+   ],
+   "r_in": 0.2315,
+   "r_out": 0.3439,
+   "half_w": 0.0925
+  }
+ },
+ "tyres": "measured hand split",
+ "others": "SAM 3 + geometric rules"
+}

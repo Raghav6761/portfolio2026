@@ -5,8 +5,10 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { SparkRenderer, SplatMesh } from '@sparkjsdev/spark';
 
 // Layers:
-//  - Gaussian splat (Brush, 30k steps) draws the pixels. The bike ships as one file with the wheels removed,
-//    plus one file per tyre, so "remove the tyre" is a visibility toggle, not a shader-side region test.
+//  - Gaussian splat (Brush, 30k steps) draws the pixels. The bike ships as one splat file PER PART (24 files):
+//    SAM 3 labelled 120 of the photos, the labels were voted onto every Gaussian, wheels cut by fitted geometry;
+//    the two tyres use the measured hand splits. "Remove the tyre" / "show only the seat" are visibility toggles.
+//    A second set of the same parts in flat colours backs the "by part" view and loads only when asked for.
 //  - The photogrammetry mesh stays invisible: it is the raycast surface for clicks and the "clay" view.
 //  - Replacement parts are GLBs placed on each wheel's measured axle pose; the owner can nudge them.
 
@@ -35,7 +37,7 @@ type WheelDef = {
     title: string; sub: string;
     c: THREE.Vector3; n: THREE.Vector3;        // axle centre and direction (bike on centre stand: no lean)
     rIn: number; rOut: number; halfW: number;  // envelope of the tyre being removed, for hit-testing
-    splat: string;                             // the scan's own tyre, as its own splat file
+    splat: string;                             // name of the part file that is the scan's own tyre
     parts: Record<PartKey, PartDef>;
 };
 // Measured from the scan: centre from a tread-edge circle fit, mid-plane from tread/mudguard edges (never the
@@ -44,7 +46,7 @@ export const WHEELS: Record<WheelKey, WheelDef> = {
     front: {
         title: 'Front tyre', sub: '19" · the scan\'s tyre is its own splat · parts sit on the measured axle',
         c: new THREE.Vector3(0.7137, 0.326, -0.038), n: new THREE.Vector3(-0.05, 0, -0.9987).normalize(),
-        rIn: 0.245, rOut: 0.346, halfW: 0.066, splat: '/models/rahul2-meteor-fronttyre.spz',
+        rIn: 0.245, rOut: 0.346, halfW: 0.066, splat: 'front tyre',
         parts: {
             ceat: { label: 'CEAT Zoom Plus 100/90‑19', small: 'built from four catalogue renders', file: '/models/ceat-zoom-plus-100-90-19.glb' },
             block: { label: 'Block tread 100/90‑19', small: 'placeholder · generated', file: '/models/tyre-block-100-90-19.glb' },
@@ -53,7 +55,7 @@ export const WHEELS: Record<WheelKey, WheelDef> = {
     rear: {
         title: 'Rear tyre', sub: '17" · the scan\'s tyre is its own splat · parts sit on the measured axle',
         c: new THREE.Vector3(-0.689, 0.3265, -0.042), n: new THREE.Vector3(0, 0, -1),
-        rIn: 0.235, rOut: 0.338, halfW: 0.09, splat: '/models/rahul2-meteor-reartyre.spz',
+        rIn: 0.235, rOut: 0.338, halfW: 0.09, splat: 'rear tyre',
         parts: {
             ceat: { label: 'CEAT Zoom Plus 140/70‑17', small: 'same renders, rear size', file: '/models/ceat-zoom-plus-140-70-17.glb' },
         },
@@ -98,20 +100,47 @@ export function mountBike(canvas: HTMLCanvasElement, onProgress?: (label: string
     };
     go('home');
 
-    // ---- splats ----
-    const makeSplat = (url: string, label: string) => {
-        const m = new SplatMesh({ url, onLoad: () => onProgress?.(label, 100) });
+    // ---- splats: one file per part ----
+    type PartsMeta = { parts: string[]; colors: number[][]; sizes: Record<string, number> };
+    const partMesh: { photo: Record<string, SplatMesh>; flat: Record<string, SplatMesh> } = { photo: {}, flat: {} };
+    const partVisible: Record<string, boolean> = {};
+    let solo: string | null = null;
+    let mode: 'photo' | 'flat' = 'photo';
+    let splatOn = true;
+    let meta: PartsMeta = { parts: [], colors: [], sizes: {} };
+    const slug = (p: string) => p.replace(/ /g, '_');
+    const applyParts = () => {
+        for (const p of meta.parts) {
+            const show = splatOn && partVisible[p] && (solo === null || solo === p);
+            for (const kind of ['photo', 'flat'] as const) { const m = partMesh[kind][p]; if (m) m.visible = show && mode === kind; }
+        }
+    };
+    const loadPartSplat = (p: string, kind: 'photo' | 'flat', onDone?: () => void) => {
+        const m = new SplatMesh({ url: `/models/parts/${slug(p)}${kind === 'flat' ? '_flat' : ''}.spz`, onLoad: () => onDone?.() });
         m.matrixAutoUpdate = false;
         m.matrix.copy(RAW_TO_METRIC);
+        m.visible = false;
         scene.add(m);
+        partMesh[kind][p] = m;
         return m;
     };
-    const splat = makeSplat('/models/rahul2-meteor.spz', 'splat');
-    const tyreSplats: Record<WheelKey, SplatMesh> = {
-        front: makeSplat(WHEELS.front.splat, 'front tyre'),
-        rear: makeSplat(WHEELS.rear.splat, 'rear tyre'),
-    };
-    const ready = Promise.all([splat.initialized, tyreSplats.front.initialized, tyreSplats.rear.initialized]).then(() => undefined);
+    const fitted: Record<WheelKey, PartKey> = { front: 'scan', rear: 'scan' };
+    const ready = fetch('/models/parts/parts.json').then((r) => r.json()).then(async (j: PartsMeta) => {
+        meta = j;
+        for (const p of meta.parts) partVisible[p] = p !== 'background';
+        let done = 0;
+        const big = [...meta.parts].sort((a, b) => (meta.sizes[b] ?? 0) - (meta.sizes[a] ?? 0));
+        const all = big.map((p) => loadPartSplat(p, 'photo', () => onProgress?.('splat', Math.round((++done / big.length) * 100))));
+        await Promise.all(all.map((m) => m.initialized));
+        applyParts();
+    });
+    let flatLoading: Promise<void> | null = null;
+    const ensureFlat = () => flatLoading ??= (async () => {
+        let done = 0;
+        const all = meta.parts.map((p) => loadPartSplat(p, 'flat', () => onProgress?.('part colours', Math.round((++done / meta.parts.length) * 100))));
+        await Promise.all(all.map((m) => m.initialized));
+        applyParts();
+    })();
 
     // ---- mesh: hidden hit-test layer and clay view ----
     const meshes: THREE.Mesh[] = [];
@@ -137,11 +166,9 @@ export function mountBike(canvas: HTMLCanvasElement, onProgress?: (label: string
         scene.add(meshRoot);
     });
 
-    // ---- parts ----
-    const fitted: Record<WheelKey, PartKey> = { front: 'scan', rear: 'scan' };
+    // ---- replacement parts ----
     const loaded: Record<WheelKey, Record<PartKey, THREE.Group>> = { front: {}, rear: {} };
     const adjust: Record<WheelKey, THREE.Vector3> = { front: new THREE.Vector3(), rear: new THREE.Vector3() }; // owner's correction: x fore/aft, y up, z along axle (m)
-    let splatOn = true;
 
     const adjustedCentre = (wk: WheelKey) => {
         const W = WHEELS[wk], a = adjust[wk];
@@ -215,11 +242,14 @@ export function mountBike(canvas: HTMLCanvasElement, onProgress?: (label: string
         wheels: WHEELS,
         fittedOn: (wk: WheelKey) => fitted[wk],
         adjustment: (wk: WheelKey) => adjust[wk].clone(),
-        setSplat(on: boolean) {
-            splatOn = on;
-            splat.visible = on;
-            for (const wk of Object.keys(tyreSplats) as WheelKey[]) tyreSplats[wk].visible = on && fitted[wk] === 'scan';
-        },
+        setSplat(on: boolean) { splatOn = on; applyParts(); },
+        /** Part list and colours, available once `ready` resolves. */
+        parts: () => meta,
+        partState: () => ({ visible: { ...partVisible }, solo, mode }),
+        setPartVisible(p: string, on: boolean) { partVisible[p] = on; applyParts(); },
+        setSolo(p: string | null) { solo = p; if (p) partVisible[p] = true; applyParts(); },
+        showAllParts() { solo = null; for (const p of meta.parts) partVisible[p] = p !== 'background'; applyParts(); },
+        async setMode(m: 'photo' | 'flat') { mode = m; applyParts(); if (m === 'flat') await ensureFlat(); },
         setMesh(on: boolean) { if (meshRoot) meshRoot.visible = on; },
         setClay(on: boolean) { meshes.forEach((m, i) => (m.material = on ? clay : scanMaterials[i])); },
         toggleSpin() { controls.autoRotate = !controls.autoRotate; return controls.autoRotate; },
@@ -235,7 +265,8 @@ export function mountBike(canvas: HTMLCanvasElement, onProgress?: (label: string
         async fit(wk: WheelKey, pk: PartKey) {
             fitted[wk] = pk;
             Object.values(loaded[wk]).forEach((p) => (p.visible = false));
-            tyreSplats[wk].visible = pk === 'scan' && splatOn;
+            partVisible[WHEELS[wk].splat] = pk === 'scan';
+            applyParts();
             if (pk !== 'scan') {
                 const part = await loadPart(wk, pk);
                 if (fitted[wk] === pk) { Object.values(loaded[wk]).forEach((p) => (p.visible = false)); part.visible = true; }
