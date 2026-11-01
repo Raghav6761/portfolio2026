@@ -1,0 +1,318 @@
+{
+ "parts": [
+  "front tyre",
+  "rear tyre",
+  "front wheel",
+  "rear wheel",
+  "front mudguard",
+  "rear mudguard",
+  "fork",
+  "headlamp",
+  "indicators",
+  "handlebar",
+  "mirrors",
+  "instrument",
+  "fuel tank",
+  "seat",
+  "side panels",
+  "engine",
+  "exhaust",
+  "shock absorbers",
+  "tail lamp",
+  "number plate",
+  "centre stand",
+  "phone mount",
+  "unlabelled",
+  "background"
+ ],
+ "colors": [
+  [
+   230,
+   25,
+   75
+  ],
+  [
+   60,
+   180,
+   75
+  ],
+  [
+   255,
+   225,
+   25
+  ],
+  [
+   0,
+   130,
+   200
+  ],
+  [
+   245,
+   130,
+   48
+  ],
+  [
+   145,
+   30,
+   180
+  ],
+  [
+   70,
+   240,
+   240
+  ],
+  [
+   240,
+   50,
+   230
+  ],
+  [
+   210,
+   245,
+   60
+  ],
+  [
+   250,
+   190,
+   212
+  ],
+  [
+   0,
+   128,
+   128
+  ],
+  [
+   220,
+   190,
+   255
+  ],
+  [
+   170,
+   110,
+   40
+  ],
+  [
+   255,
+   250,
+   200
+  ],
+  [
+   128,
+   0,
+   0
+  ],
+  [
+   170,
+   255,
+   195
+  ],
+  [
+   128,
+   128,
+   0
+  ],
+  [
+   255,
+   215,
+   180
+  ],
+  [
+   0,
+   0,
+   128
+  ],
+  [
+   255,
+   255,
+   255
+  ],
+  [
+   100,
+   60,
+   20
+  ],
+  [
+   255,
+   105,
+   180
+  ],
+  [
+   120,
+   120,
+   120
+  ],
+  [
+   40,
+   40,
+   40
+  ]
+ ],
+ "sizes": {
+  "front tyre": 64701,
+  "rear tyre": 30155,
+  "front wheel": 68192,
+  "rear wheel": 31648,
+  "front mudguard": 19272,
+  "rear mudguard": 13661,
+  "fork": 38229,
+  "headlamp": 39634,
+  "indicators": 15937,
+  "handlebar": 29116,
+  "mirrors": 8949,
+  "instrument": 9884,
+  "fuel tank": 28882,
+  "seat": 49869,
+  "side panels": 28324,
+  "engine": 84171,
+  "exhaust": 28395,
+  "shock absorbers": 16816,
+  "tail lamp": 7082,
+  "number plate": 27620,
+  "centre stand": 31,
+  "phone mount": 14984,
+  "unlabelled": 339488,
+  "background": 4166
+ },
+ "wheels": {
+  "front": {
+   "c": [
+    0.7289,
+    0.3154,
+    -0.0319
+   ],
+   "n": [
+    -0.038,
+    0.0271,
+    -0.9989
+   ],
+   "r_in": 0.2502,
+   "r_out": 0.3422,
+   "half_w": 0.0625
+  },
+  "rear": {
+   "c": [
+    -0.702,
+    0.3074,
+    -0.0439
+   ],
+   "n": [
+    0.082,
+    0.0301,
+    -0.9962
+   ],
+   "r_in": 0.2284,
+   "r_out": 0.3438,
+   "half_w": 0.0925
+  }
+ },
+ "tyres": "SAM 3 + geometric rules (no hand split)",
+ "others": "SAM 3 + geometric rules",
+ "source": "in.ply",
+ "agreement_with_deployed": {
+  "front tyre": [
+   0.821,
+   0.931,
+   0.875
+  ],
+  "rear tyre": [
+   0.704,
+   0.721,
+   0.968
+  ],
+  "front wheel": [
+   0.869,
+   0.948,
+   0.913
+  ],
+  "rear wheel": [
+   0.928,
+   0.959,
+   0.967
+  ],
+  "front mudguard": [
+   0.557,
+   0.597,
+   0.891
+  ],
+  "rear mudguard": [
+   0.847,
+   0.928,
+   0.907
+  ],
+  "fork": [
+   0.871,
+   0.903,
+   0.962
+  ],
+  "headlamp": [
+   0.96,
+   0.98,
+   0.979
+  ],
+  "indicators": [
+   0.941,
+   0.966,
+   0.974
+  ],
+  "handlebar": [
+   0.924,
+   0.953,
+   0.968
+  ],
+  "mirrors": [
+   0.968,
+   0.991,
+   0.977
+  ],
+  "instrument": [
+   0.934,
+   0.969,
+   0.963
+  ],
+  "fuel tank": [
+   0.979,
+   0.992,
+   0.987
+  ],
+  "seat": [
+   0.976,
+   0.99,
+   0.986
+  ],
+  "side panels": [
+   0.922,
+   0.95,
+   0.969
+  ],
+  "engine": [
+   0.965,
+   0.982,
+   0.982
+  ],
+  "exhaust": [
+   0.965,
+   0.994,
+   0.971
+  ],
+  "shock absorbers": [
+   0.946,
+   0.981,
+   0.964
+  ],
+  "tail lamp": [
+   0.962,
+   0.987,
+   0.974
+  ],
+  "number plate": [
+   0.966,
+   0.985,
+   0.981
+  ],
+  "phone mount": [
+   0.956,
+   0.98,
+   0.975
+  ]
+ }
+}

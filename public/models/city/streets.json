@@ -1,0 +1,287 @@
+{
+ "frame": "Ragav 123.fbx world coordinates -- the only file containing both streets",
+ "unitScale": 1.0,
+ "pieces": {
+  "road": {
+   "file": "road.glb",
+   "nativeAxisRad": 0.845614
+  },
+  "roundabout": {
+   "file": "roundabout.glb",
+   "nativeAxisRad": 0.845614
+  },
+  "trafficLight": {
+   "file": "low-poly-traffic-light.glb",
+   "nativeAxisRad": 0.845614
+  }
+ },
+ "streets": [
+  {
+   "id": "boulevard",
+   "axisRad": 2.453216,
+   "origin": {
+    "x": 21.6,
+    "z": 81.1
+   },
+   "note": "slots are intrinsic to the street (measured from its own roundabouts), so they carry over unchanged from single road layout.fbx",
+   "roundabouts": [
+    {
+     "along": 0.0
+    },
+    {
+     "along": 230.0
+    },
+    {
+     "along": 459.5
+    },
+    {
+     "along": 690.0
+    }
+   ],
+   "roads": [
+    {
+     "along": 115.0
+    },
+    {
+     "along": 345.0
+    },
+    {
+     "along": 575.0
+    }
+   ],
+   "buildings": [
+    {
+     "along": 60.5,
+     "across": 36.8,
+     "height": 76.8,
+     "suggest": "bulding-2"
+    },
+    {
+     "along": 60.5,
+     "across": -36.8,
+     "height": 76.8,
+     "suggest": "bulding-2"
+    },
+    {
+     "along": 120.8,
+     "across": -37.0,
+     "height": 110.5,
+     "suggest": "bulding-2"
+    },
+    {
+     "along": 120.8,
+     "across": 37.0,
+     "height": 110.5,
+     "suggest": "bulding-2"
+    },
+    {
+     "along": 166.5,
+     "across": 33.4,
+     "height": 69.3,
+     "suggest": "house3"
+    },
+    {
+     "along": 166.5,
+     "across": -33.4,
+     "height": 26.3,
+     "suggest": "house1"
+    },
+    {
+     "along": 290.4,
+     "across": -51.9,
+     "height": 178.8,
+     "suggest": "bulding-1"
+    },
+    {
+     "along": 290.4,
+     "across": 51.9,
+     "height": 178.7,
+     "suggest": "bulding-1"
+    },
+    {
+     "along": 354.2,
+     "across": -51.9,
+     "height": 187.9,
+     "suggest": "bulding-1"
+    },
+    {
+     "along": 354.2,
+     "across": 51.9,
+     "height": 189.1,
+     "suggest": "bulding-1"
+    },
+    {
+     "along": 406.8,
+     "across": -31.4,
+     "height": 26.9,
+     "suggest": "house1"
+    },
+    {
+     "along": 406.8,
+     "across": 31.4,
+     "height": 26.9,
+     "suggest": "house1"
+    },
+    {
+     "along": 514.5,
+     "across": -36.1,
+     "height": 92.5,
+     "suggest": "bulding-2"
+    },
+    {
+     "along": 514.5,
+     "across": 36.1,
+     "height": 92.4,
+     "suggest": "bulding-2"
+    },
+    {
+     "along": 572.2,
+     "across": -36.7,
+     "height": 55.4,
+     "suggest": "house3"
+    },
+    {
+     "along": 572.2,
+     "across": 36.7,
+     "height": 55.7,
+     "suggest": "house3"
+    },
+    {
+     "along": 629.9,
+     "across": -37.4,
+     "height": 90.2,
+     "suggest": "bulding-2"
+    },
+    {
+     "along": 629.9,
+     "across": 37.4,
+     "height": 90.2,
+     "suggest": "bulding-2"
+    }
+   ]
+  },
+  {
+   "id": "cross",
+   "axisRad": 0.845668,
+   "origin": {
+    "x": 226.98,
+    "z": -350.26
+   },
+   "roundabouts": [
+    {
+     "along": -112.5
+    },
+    {
+     "along": 326.2
+    }
+   ],
+   "roads": [
+    {
+     "along": 0.0
+    },
+    {
+     "along": 229.1
+    }
+   ],
+   "junction": {
+    "along": 114.8,
+    "lights": [
+     {
+      "along": 87.9,
+      "across": 14.4
+     },
+     {
+      "along": 127.4,
+      "across": 27.2
+     },
+     {
+      "along": 140.3,
+      "across": -15.9
+     },
+     {
+      "along": 103.7,
+      "across": -26.0
+     }
+    ]
+   },
+   "buildings": [
+    {
+     "along": -164.9,
+     "across": -3.1,
+     "suggest": "bulding-2",
+     "height": 108.3,
+     "src": "Mod_Mid_Crossing_South_Office_01"
+    },
+    {
+     "along": -85.3,
+     "across": 53.6,
+     "height": 180.6,
+     "suggest": "highfort-keep",
+     "pending": true,
+     "src": "Bld_HighFort_Keep_01"
+    },
+    {
+     "along": -84.4,
+     "across": -51.4,
+     "suggest": "house2",
+     "height": 37.4,
+     "src": "Bld_Crossing_Longhouse_03"
+    },
+    {
+     "along": -15.4,
+     "across": -42.4,
+     "suggest": "bulding-2",
+     "height": 108.3,
+     "src": "Mod_Mid_Crossing_South_Office_01"
+    },
+    {
+     "along": -0.1,
+     "across": 44.8,
+     "suggest": "bulding-1",
+     "height": 160.5,
+     "src": "Mod_Mid_Crossing_South_Tower_01"
+    },
+    {
+     "along": 208.3,
+     "across": -37.1,
+     "height": 115.5,
+     "suggest": "watchtower",
+     "src": "Bld_Crossing_Watchtower_02"
+    },
+    {
+     "along": 211.4,
+     "across": 37.2,
+     "height": 115.5,
+     "suggest": "watchtower",
+     "src": "Bld_Crossing_Watchtower_01"
+    },
+    {
+     "along": 317.1,
+     "across": -60.0,
+     "suggest": "house1",
+     "height": 29.8,
+     "src": "Mod_Mid_Crossing_South_Villa_01"
+    },
+    {
+     "along": 366.6,
+     "across": 32.5,
+     "suggest": "house3",
+     "height": 41.6,
+     "src": "Bld_Crossing_House_11"
+    },
+    {
+     "along": 369.1,
+     "across": -43.9,
+     "suggest": "house2",
+     "height": 36.8,
+     "src": "Bld_Crossing_Longhouse_03"
+    }
+   ],
+   "note": "buildings here are the five pieces Mandeep exported; they were always cross-street"
+  }
+ ],
+ "buildingNativeAxisRad": 0.845614,
+ "rotationNote": "each piece was exported in place, so it carries its source street's orientation. Placing it on another street needs a turn of (street.axisRad - nativeAxisRad).",
+ "pendingNote": "entries with pending:true have no .glb yet. city.ts skips any piece whose file is absent, so they appear automatically once dropped in. watchtower.glb landed 2026-10-28 (tower.fbx = Bld_Crossing_Watchtower_01, verified 81/81 verts under pure translation); Watchtower_01 and _02 are the same mesh, so one file serves both slots.",
+ "piecesNote": "road.glb / roundabout.glb are Mandeep's own exports (road.fbx, roundabout.fbx). nativeAxisRad 0.845614 = 48.45 deg, the cross-street scene they were baked in -- same value as buildingNativeAxisRad. Do NOT re-derive these by eye; PCA on road.glb gives 48.65 deg, 0.2 deg from the independently measured cross-street axis. The roundabout is 4-fold symmetric so its turn only matters mod 90 deg."
+}

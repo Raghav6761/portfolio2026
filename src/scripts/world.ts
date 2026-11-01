@@ -3,11 +3,19 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 // import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { buildCity } from './city';
+import { buildCity, flattenUnder } from './city';
+import { buildTraffic } from './traffic';
+import { buildMinimap } from './minimap';
+import { buildLandmarkCard, type LandmarkProject } from './landmark';
 // import { Sky } from 'three/addons/objects/Sky.js';
 // import { makeGrassTuft, makeGrassMaterial } from './grassTuft';
 
-export async function mountWorld(canvas: HTMLCanvasElement) {
+export async function mountWorld(
+    canvas: HTMLCanvasElement,
+    /** passed down from world.astro, which reads it from the content
+     *  collection -- so the copy lives in markdown, not in this file. */
+    opts: { project?: LandmarkProject } = {},
+) {
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -1024,9 +1032,102 @@ export async function mountWorld(canvas: HTMLCanvasElement) {
     // Built here, not earlier, because it needs groundAt() to find somewhere
     // flat to stand on. Wrapped so a bad asset can't take the whole world down
     // -- the flight sim is the page; the city is scenery on it.
+    // A flight to a landmark. While one is running it owns the camera, so fly()
+    // is skipped -- otherwise the two fight over controls.target every frame.
+    type Trip = { from: THREE.Vector3; to: THREE.Vector3;
+                  camFrom: THREE.Vector3; camTo: THREE.Vector3; t: number };
+    let trip: Trip | null = null;
+    let pinAt: THREE.Vector3 | null = null;
+    const TRIP_SECONDS = 1.5;
+
+    function jumpTo(p: THREE.Vector3) {
+        // Arrive on the same bearing you were already facing, so the world does
+        // not spin under you -- you just find yourself closer.
+        const dir = new THREE.Vector3().subVectors(camera.position, controls.target);
+        dir.y = 0;
+        if (dir.lengthSq() < 1e-6) dir.set(0, 0, 1);
+        dir.normalize();
+        const to = p.clone();
+        to.y += 26;                       // hold station above the junction
+        trip = {
+            from: controls.target.clone(), to,
+            camFrom: camera.position.clone(),
+            camTo: to.clone().addScaledVector(dir, 44).setY(to.y + 16),
+            t: 0,
+        };
+    }
+
+    addEventListener('keydown', () => { trip = null; });
+
+    // All three hang off the city, so all three stay null if it fails to build.
+    // A missing asset must never cost you a flyable world.
+    let traffic: ReturnType<typeof buildTraffic> | null = null;
+    let pin: Awaited<ReturnType<typeof buildCity>>['pin'] | null = null;
+    let minimap: ReturnType<typeof buildMinimap> | null = null;
+    let card: ReturnType<typeof buildLandmarkCard> | null = null;
+
     try {
-        const { city } = await buildCity({ loader, groundAt, scale: 0.2 });
-        scene.add(city);
+        const built = await buildCity({ loader, groundAt, scale: 0.2 });
+        // Must run before anything else reads the ground: it edits the very
+        // mesh groundAt() raycasts, so the helicopter's floor picks up the
+        // plateau for free. 85/320 measured -- see flattenUnder's note.
+        flattenUnder(ground, built.centre, 85, 320);
+        scene.add(built.city);
+
+        // Cars go INSIDE the city group on purpose: they are then laid out in
+        // the same layout units streets.json uses, and inherit the city's scale
+        // and its position on the plateau for free.
+        traffic = buildTraffic({ layout: built.layout, lights: built.lights, cars: 24 });
+        built.city.add(traffic.group);
+
+        // The pin must NOT be inside the city group. It rescales itself by
+        // camera distance every frame, and the group's 0.2 would multiply that.
+        pin = built.pin;
+        pinAt = built.junction.clone();
+        scene.add(pin.group);
+        scene.add(pin.beam);
+
+        // --- click the marker, fly to the junction -----------------------
+        // The plan from the explorable-portfolio research: a map with markers
+        // and jump-to-location. This is the jump.
+        if (opts.project) {
+            card = buildLandmarkCard({
+                project: opts.project,
+                phase: () => (traffic ? traffic.phase : null),
+                // Numbered for the reader; the id underneath is what the
+                // signal cycle actually reports. Index order is the order in
+                // streets.json, so the numbering never shuffles between loads.
+                signals: built.layout.streets.map((st, i) => ({
+                    id: st.id, label: `Junction ${i + 1}`,
+                })),
+            });
+        }
+
+        canvas.addEventListener('pointerdown', (e: PointerEvent) => {
+            if (pin && pin.hitTest(e.clientX, e.clientY, camera, canvas)) {
+                e.stopPropagation();     // do not let OrbitControls start a drag
+                jumpTo(built.junction);
+                card?.show();            // up during the flight, not after it
+            } else {
+                trip = null;             // any other touch takes the controls back
+            }
+        }, true);
+        canvas.addEventListener('pointermove', (e: PointerEvent) => {
+            if (!pin) return;
+            canvas.style.cursor = pin.hitTest(e.clientX, e.clientY, camera, canvas) ? 'pointer' : '';
+        });
+
+        minimap = buildMinimap({
+            extent: Math.max(terrainBox.max.x, terrainBox.max.z),
+            bound: { x: BOUND_X, z: BOUND_Z },
+            roads: built.roads,
+            roadWidth: built.roadWidth,
+            circles: built.circles,
+            footprints: built.footprints,
+            junction: { x: built.junction.x, z: built.junction.z },
+            range: 250,          // world units to the rim; ~750 m at this scale
+            headingUp: true,     // false gives a fixed north-up dial instead
+        });
     } catch (err) {
         console.error('[city] failed to build, carrying on without it', err);
     }
@@ -1039,11 +1140,31 @@ export async function mountWorld(canvas: HTMLCanvasElement) {
         timer.update(t);
         const dt = timer.getDelta();
 
-        fly(dt);
+        if (trip) {
+            trip.t = Math.min(1, trip.t + dt / TRIP_SECONDS);
+            // easeInOutCubic: leaves gently, arrives gently, no lurch either end
+            const e = trip.t < 0.5
+                ? 4 * trip.t ** 3
+                : 1 - Math.pow(-2 * trip.t + 2, 3) / 2;
+            controls.target.lerpVectors(trip.from, trip.to, e);
+            camera.position.lerpVectors(trip.camFrom, trip.camTo, e);
+            if (trip.t >= 1) trip = null;
+        } else {
+            fly(dt);
+        }
         controls.update();
         clampToGround();
         flyCraft(dt);
         altimeter(dt);   // after clampToGround, so it reads the committed altitude
+        traffic?.update(dt);
+        pin?.update(dt, camera);
+        if (card?.isOpen) {
+            card.update();
+            // Leave the junction behind and the card goes with you, rather than
+            // sitting there over a city you can no longer see.
+            if (pinAt && controls.target.distanceTo(pinAt) > 380) card.hide();
+        }
+        minimap?.update(dt, controls.target, fwd);   // fwd is refreshed inside fly()
         renderer.render(scene, camera);
     });
 }

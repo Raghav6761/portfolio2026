@@ -1,15 +1,39 @@
 ---
 import Layout from "../layouts/Layout.astro";
+import { getCollection } from "astro:content";
+
+// The junction marker's card reads the SAME content collection the homepage
+// does, so the copy lives in src/content/projects/trafficlights.md and nowhere
+// else -- edit the markdown and the card changes with it.
+// getCollection + find rather than getEntry, to match how Projects.astro and
+// Foundations.astro already do it.
+const projects = await getCollection("projects");
+const tl = projects.find((p) => p.id === "trafficlights");
+const project = tl
+    ? {
+          title: tl.data.title,
+          domain: tl.data.domain,
+          description: tl.data.description,
+          stack: tl.data.stack,
+      }
+    : null;
 ---
 
 <Layout title="World - Raghav Watts">
-    <canvas id="world"></canvas>
+    <!-- Handed over on the element rather than through a global: the module
+         script below cannot use define:vars, and a data attribute keeps the
+         value scoped to the canvas it belongs to. -->
+    <canvas id="world" data-project={project ? JSON.stringify(project) : null}
+    ></canvas>
 </Layout>
 
 <script>
-    import {mountWorld} from "../scripts/world";
+    import { mountWorld } from "../scripts/world";
     const canvas = document.getElementById("world") as HTMLCanvasElement;
-    if (canvas) mountWorld(canvas);
+    if (canvas) {
+        const raw = canvas.dataset.project;
+        mountWorld(canvas, { project: raw ? JSON.parse(raw) : undefined });
+    }
 </script>
 
 <style is:global>

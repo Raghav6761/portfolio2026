@@ -3,6 +3,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { SparkRenderer, SplatMesh } from '@sparkjsdev/spark';
+const PARTS_DIR = (() => { try { const v = new URLSearchParams(location.search).get('parts'); return v && /^[a-z0-9_-]+$/i.test(v) ? v : 'parts'; } catch { return 'parts'; } })();
 
 // Layers:
 //  - Gaussian splat (Brush, 30k steps) draws the pixels. The bike ships as one splat file PER PART (24 files):
@@ -116,7 +117,7 @@ export function mountBike(canvas: HTMLCanvasElement, onProgress?: (label: string
         }
     };
     const loadPartSplat = (p: string, kind: 'photo' | 'flat', onDone?: () => void) => {
-        const m = new SplatMesh({ url: `/models/parts/${slug(p)}${kind === 'flat' ? '_flat' : ''}.spz`, onLoad: () => onDone?.() });
+        const m = new SplatMesh({ url: `/models/${PARTS_DIR}/${slug(p)}${kind === 'flat' ? '_flat' : ''}.spz`, onLoad: () => onDone?.() });
         m.matrixAutoUpdate = false;
         m.matrix.copy(RAW_TO_METRIC);
         m.visible = false;
@@ -125,7 +126,7 @@ export function mountBike(canvas: HTMLCanvasElement, onProgress?: (label: string
         return m;
     };
     const fitted: Record<WheelKey, PartKey> = { front: 'scan', rear: 'scan' };
-    const ready = fetch('/models/parts/parts.json').then((r) => r.json()).then(async (j: PartsMeta) => {
+    const ready = fetch(`/models/${PARTS_DIR}/parts.json`).then((r) => r.json()).then(async (j: PartsMeta) => {
         meta = j;
         for (const p of meta.parts) partVisible[p] = p !== 'background';
         let done = 0;
